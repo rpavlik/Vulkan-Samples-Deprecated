@@ -440,7 +440,7 @@ Platform headers / declarations
 #    include "vulkan/vk_sdk_platform.h"
 #    include "vulkan/vk_format.h"
 
-#    define VULKAN_LOADER "libvulkan-1.so"
+#    define VULKAN_LOADER "libvulkan.so"
 #    define OUTPUT_PATH ""
 
 // These prototypes are only included when __USE_GNU is defined but that causes other compile errors.
@@ -4245,9 +4245,7 @@ static ksGpuWindowEvent ksGpuWindow_ProcessEvents(ksGpuWindow *window) {
                 }
                 break;
             }
-            default: {
-                break;
-            }
+            default: { break; }
         }
         free(event);
     }

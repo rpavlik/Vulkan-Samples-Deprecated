@@ -2140,13 +2140,13 @@ static bool ksGpuContext_CreateForSurface(ksGpuContext *context, const ksGpuDevi
     context->xDisplay = xDisplay;
 
     int attribs[] = {GLX_CONTEXT_MAJOR_VERSION_ARB,
-                     OPENGL_VERSION_MAJOR,
+                     OPENGL_VERSION_MAJOR,  //
                      GLX_CONTEXT_MINOR_VERSION_ARB,
-                     OPENGL_VERSION_MINOR,
+                     OPENGL_VERSION_MINOR,  //
                      GLX_CONTEXT_PROFILE_MASK_ARB,
-                     GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+                     GLX_CONTEXT_CORE_PROFILE_BIT_ARB,  //
                      GLX_CONTEXT_FLAGS_ARB,
-                     GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+                     GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,  //
                      0};
 
     context->glxContext = glXCreateContextAttribsARB(xDisplay,              // Display *    dpy
@@ -2372,7 +2372,8 @@ static bool ksGpuContext_CreateForSurface(ksGpuContext *context, const ksGpuDevi
 
     const EGLint configAttribs[] = {EGL_RED_SIZE, bits.greenBits, EGL_GREEN_SIZE, bits.redBits, EGL_BLUE_SIZE, bits.blueBits,
                                     EGL_ALPHA_SIZE, bits.alphaBits, EGL_DEPTH_SIZE, bits.depthBits,
-                                    // EGL_STENCIL_SIZE,    0,
+                                    // EGL_STENCIL_SIZE,
+                                    // 0,
                                     EGL_SAMPLE_BUFFERS, (sampleCount > KS_GPU_SAMPLE_COUNT_1), EGL_SAMPLES,
                                     (sampleCount > KS_GPU_SAMPLE_COUNT_1) ? sampleCount : 0, EGL_NONE};
 
@@ -4083,9 +4084,7 @@ static ksGpuWindowEvent ksGpuWindow_ProcessEvents(ksGpuWindow *window) {
                 }
                 break;
             }
-            default: {
-                break;
-            }
+            default: { break; }
         }
         free(event);
     }
@@ -7458,22 +7457,20 @@ typedef enum {
     KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE,    // not sampled, direct read-write storage    (GLSL: image*, iimage*, uimage*)
     KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM,     // read-only uniform buffer                    (GLSL: uniform)
     KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE,     // read-write storage buffer                (GLSL: buffer)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT,  // int                                        (GLSL:
-                                                 // int)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR2,      // int[2]                                    (GLSL:
-                                                             // ivec2)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR3,      // int[3]                                    (GLSL:
-                                                             // ivec3)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR4,      // int[4]                                    (GLSL:
-                                                             // ivec4)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT,            // float                                    (GLSL:
-                                                             // float)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR2,    // float[2]                                    (GLSL:
-                                                             // vec2)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR3,    // float[3]                                    (GLSL:
-                                                             // vec3)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR4,    // float[4]                                    (GLSL:
-                                                             // vec4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT,  // int (GLSL: int)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR2,      // int[2]
+                                                             // (GLSL: ivec2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR3,      // int[3]
+                                                             // (GLSL: ivec3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR4,      // int[4]
+                                                             // (GLSL: ivec4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT,            // float (GLSL: float)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR2,    // float[2]
+                                                             // (GLSL: vec2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR3,    // float[3]
+                                                             // (GLSL: vec3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR4,    // float[4]
+                                                             // (GLSL: vec4)
     KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X2,  // float[2][2]
                                                              // (GLSL: mat2x2 or mat2)
     KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X3,  // float[2][3]

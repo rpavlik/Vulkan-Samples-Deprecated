@@ -1,4 +1,4 @@
-﻿/*
+/*
 ================================================================================================
 
 Description :   Asynchronous Time Warp test utility for OpenGL.
@@ -435,6 +435,7 @@ Platform headers / declarations
 #        define _XOPEN_SOURCE 500
 #    endif
 
+#    include <strings.h>   // for strcasecmp
 #    include <time.h>      // for timespec
 #    include <sys/time.h>  // for gettimeofday()
 #    if !defined(__USE_UNIX98)

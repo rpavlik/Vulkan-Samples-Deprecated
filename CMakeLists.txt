@@ -35,11 +35,11 @@ elseif( APPLE )
         )
 else()
     set( BASE_DIR "${CMAKE_SOURCE_DIR}" )
-    add_custom_target( vk_dispatch_table_helper
-        COMMAND mkdir -p ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/build/generated/include
-        COMMAND python3 ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/lvl_genvk.py -registry ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/vk.xml vk_dispatch_table_helper.h -o ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/build/generated/include
-        COMMAND python3 ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/lvl_genvk.py -registry ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/vk.xml vk_layer_dispatch_table.h -o ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/build/generated/include
-        )
+    # add_custom_target( vk_dispatch_table_helper
+    #     COMMAND mkdir -p ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/build/generated/include
+    #     COMMAND python3 ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/lvl_genvk.py -registry ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/vk.xml vk_dispatch_table_helper.h -o ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/build/generated/include
+    #     COMMAND python3 ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/lvl_genvk.py -registry ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/scripts/vk.xml vk_layer_dispatch_table.h -o ${BASE_DIR}/../Vulkan-LoaderAndValidationLayers/build/generated/include
+    #     )
 
 	#Sanity check as we don't support compiling with more than one presentation/input path.
 	if( SUPPORT_X AND SUPPORT_DISPLAY_SURFACE)
@@ -59,5 +59,5 @@ if( SUPPORT_DISPLAY_SURFACE )
 endif()
 
 add_subdirectory( external/include )
-add_subdirectory( external/libs/glslang )
+# add_subdirectory( external/libs/glslang )
 add_subdirectory( samples )

@@ -1,2 +1,2 @@
 add_subdirectory( atw )
-add_subdirectory( driverinfo )
+# add_subdirectory( driverinfo )

@@ -470,7 +470,7 @@ static void dspcache_l2fetch_linear( const void * addr, unsigned int bytes )
 		"	}{\n"
 		"		l2fetch(%0,r2)\n"				// fetch
 		"	}\n"
-        : 
+        :
         : "r" (addr), "r" (bytes)
         : "p0", "r2", "r3" );
 }
@@ -784,7 +784,7 @@ SSE and AVX vector constants
 // {
 //     __int8           m128i_i8[16];
 //     __int16          m128i_i16[8];
-//     __int32          m128i_i32[4];    
+//     __int32          m128i_i32[4];
 //     __int64          m128i_i64[2];
 //     unsigned __int8  m128i_u8[16];
 //     unsigned __int16 m128i_u16[8];
@@ -1392,7 +1392,7 @@ static void Warp32x32_SampleNearestPackedRGB(
 		Word64 sxy23 = Q6_P_vaddh_PP( sxy01, dxy2 );
 		Word64 sxy45 = Q6_P_vaddh_PP( sxy23, dxy2 );
 		Word64 sxy67 = Q6_P_vaddh_PP( sxy45, dxy2 );
-	
+
 		Word32 pch1 = Q6_R_combine_RlRl( srcPitchInTexels, Q6_R_equals_I( 1 ) );
 		Word64 pch2 = Q6_P_combine_RR( pch1, pch1 );
 
@@ -1622,7 +1622,7 @@ static void Warp32x32_SampleLinearPackedRGB(
 
 			r0 = _mm256_packus_epi16( r0, r1 );
 			r2 = _mm256_packus_epi16( r2, r3 );
- 
+
 			_mm256_stream_si256( (__m256i *)( destRow + x + 0 ), r0 );
 			_mm256_stream_si256( (__m256i *)( destRow + x + 8 ), r2 );
 
@@ -1687,7 +1687,7 @@ static void Warp32x32_SampleLinearPackedRGB(
 
 			r0 = _mm_packus_epi16( r0, r1 );
 			r2 = _mm_packus_epi16( r2, r3 );
- 
+
 			_mm_stream_si128( (__m128i *)( destRow + x + 0 ), r0 );
 			_mm_stream_si128( (__m128i *)( destRow + x + 4 ), r2 );
 
@@ -1967,7 +1967,7 @@ static void Warp32x32_SampleLinearPackedRGB(
 
 		Word32 sxy00 = Q6_R_combine_RlRl( localSrcY8, localSrcX8 );
 		Word64 sxy01 = Q6_P_combine_RR( Q6_R_vaddh_RR( sxy00, dxy1 ), sxy00 );
-	
+
 		Word32 pch0 = Q6_R_combine_RlRl( srcPitchInTexels, Q6_R_equals_I( 1 ) );
 		Word64 pch2 = Q6_P_combine_RR( pch0, pch0 );
 
@@ -2604,12 +2604,12 @@ static void Warp32x32_SampleBilinearPackedRGB(
 			"	vmull.u8	 q8, d18, d4							\n\t"	// weight top-right green with (fracY^-1)
 			"	vmull.u8	 q9, d19, d4							\n\t"	// weight top-right blue  with (fracY^-1)
 
-			"	vmlal.u8	 q4, d20, d5							\n\t"	// weight bottom-left  red   with (fracY) and add to top-left  red   
-			"	vmlal.u8	 q5, d21, d5							\n\t"	// weight bottom-left  green with (fracY) and add to top-left  green 
-			"	vmlal.u8	 q6, d22, d5							\n\t"	// weight bottom-left  blue  with (fracY) and add to top-left  blue  
-			"	vmlal.u8	 q7, d23, d5							\n\t"	// weight bottom-right red   with (fracY) and add to top-right red   
-			"	vmlal.u8	 q8, d24, d5							\n\t"	// weight bottom-right green with (fracY) and add to top-right green 
-			"	vmlal.u8	 q9, d25, d5							\n\t"	// weight bottom-right blue  with (fracY) and add to top-right blue  
+			"	vmlal.u8	 q4, d20, d5							\n\t"	// weight bottom-left  red   with (fracY) and add to top-left  red
+			"	vmlal.u8	 q5, d21, d5							\n\t"	// weight bottom-left  green with (fracY) and add to top-left  green
+			"	vmlal.u8	 q6, d22, d5							\n\t"	// weight bottom-left  blue  with (fracY) and add to top-left  blue
+			"	vmlal.u8	 q7, d23, d5							\n\t"	// weight bottom-right red   with (fracY) and add to top-right red
+			"	vmlal.u8	 q8, d24, d5							\n\t"	// weight bottom-right green with (fracY) and add to top-right green
+			"	vmlal.u8	 q9, d25, d5							\n\t"	// weight bottom-right blue  with (fracY) and add to top-right blue
 
 			"	vqrshrn.u16	 d8,  q4, #8							\n\t"	// reduce left  red   to 8 bits of precision and half the register size
 			"	vqrshrn.u16 d10,  q5, #8							\n\t"	// reduce left  green to 8 bits of precision and half the register size
@@ -2862,7 +2862,7 @@ static void Warp32x32_SampleBilinearPackedRGB(
 	//FlushCacheBox( dest, 32 * 4, 32, destPitchInPixels * 4 );
 }
 
-static void Warp32x32_SampleBilinearPlanarRGB( 
+static void Warp32x32_SampleBilinearPlanarRGB(
 		const unsigned char * const	srcRed,
 		const unsigned char * const	srcGreen,
 		const unsigned char * const	srcBlue,
@@ -3628,12 +3628,12 @@ static void Warp32x32_SampleBilinearPlanarRGB(
 			"	vmull.u8	 q8, d17, d4								\n\t"	// weight top-right green with (fracY^-1)
 			"	vmull.u8	 q9, d19, d4								\n\t"	// weight top-right blue  with (fracY^-1)
 
-			"	vmlal.u8	 q4, d20, d5								\n\t"	// weight bottom-left  red   with (fracY) and add to top-left  red   
-			"	vmlal.u8	 q5, d22, d5								\n\t"	// weight bottom-left  green with (fracY) and add to top-left  green 
-			"	vmlal.u8	 q6, d24, d5								\n\t"	// weight bottom-left  blue  with (fracY) and add to top-left  blue  
-			"	vmlal.u8	 q7, d21, d5								\n\t"	// weight bottom-right red   with (fracY) and add to top-right red   
-			"	vmlal.u8	 q8, d23, d5								\n\t"	// weight bottom-right green with (fracY) and add to top-right green 
-			"	vmlal.u8	 q9, d25, d5								\n\t"	// weight bottom-right blue  with (fracY) and add to top-right blue  
+			"	vmlal.u8	 q4, d20, d5								\n\t"	// weight bottom-left  red   with (fracY) and add to top-left  red
+			"	vmlal.u8	 q5, d22, d5								\n\t"	// weight bottom-left  green with (fracY) and add to top-left  green
+			"	vmlal.u8	 q6, d24, d5								\n\t"	// weight bottom-left  blue  with (fracY) and add to top-left  blue
+			"	vmlal.u8	 q7, d21, d5								\n\t"	// weight bottom-right red   with (fracY) and add to top-right red
+			"	vmlal.u8	 q8, d23, d5								\n\t"	// weight bottom-right green with (fracY) and add to top-right green
+			"	vmlal.u8	 q9, d25, d5								\n\t"	// weight bottom-right blue  with (fracY) and add to top-right blue
 
 			"	vqrshrn.u16	 d8,  q4, #8								\n\t"	// reduce left  red   to 8 bits of precision and half the register size
 			"	vqrshrn.u16 d10,  q5, #8								\n\t"	// reduce left  green to 8 bits of precision and half the register size
@@ -4816,7 +4816,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(
 			__m128i rbh = _mm_srli_epi16( _mm_madd_epi16( _mm_unpackhi_epi8( rb, vector_uint8_0 ), rfxh ), STP );
 			__m128i gbh = _mm_srli_epi16( _mm_madd_epi16( _mm_unpackhi_epi8( gb, vector_uint8_0 ), gfxh ), STP );
 			__m128i bbh = _mm_srli_epi16( _mm_madd_epi16( _mm_unpackhi_epi8( bb, vector_uint8_0 ), bfxh ), STP );
-			
+
 			rt = _mm_packs_epi32( rtl, rth );
 			gt = _mm_packs_epi32( gtl, gth );
 			bt = _mm_packs_epi32( btl, bth );
@@ -6398,7 +6398,7 @@ static void FreeAlignedMemory( void * ptr )
 typedef LARGE_INTEGER PHYSICAL_ADDRESS;
 
 typedef enum _MEMORY_CACHING_TYPE
-{ 
+{
 	MmNonCached               = 0,
 	MmCached                  = 1,
 	MmWriteCombined           = 2,

@@ -219,108 +219,108 @@ viewState );
 #include <utils/lexer.h>
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4061)
+#    pragma warning(push)
+#    pragma warning(disable : 4061)
 #endif
 #if GRAPHICS_API_OPENGL == 0 && GRAPHICS_API_OPENGL_ES == 0
 
-#define GL_BYTE 0x1400
-#define GL_UNSIGNED_BYTE 0x1401
-#define GL_SHORT 0x1402
-#define GL_UNSIGNED_SHORT 0x1403
+#    define GL_BYTE 0x1400
+#    define GL_UNSIGNED_BYTE 0x1401
+#    define GL_SHORT 0x1402
+#    define GL_UNSIGNED_SHORT 0x1403
 
-#define GL_BOOL 0x8B56
-#define GL_BOOL_VEC2 0x8B57
-#define GL_BOOL_VEC3 0x8B58
-#define GL_BOOL_VEC4 0x8B59
-#define GL_INT 0x1404
-#define GL_INT_VEC2 0x8B53
-#define GL_INT_VEC3 0x8B54
-#define GL_INT_VEC4 0x8B55
-#define GL_FLOAT 0x1406
-#define GL_FLOAT_VEC2 0x8B50
-#define GL_FLOAT_VEC3 0x8B51
-#define GL_FLOAT_VEC4 0x8B52
-#define GL_FLOAT_MAT2 0x8B5A
-#define GL_FLOAT_MAT2x3 0x8B65
-#define GL_FLOAT_MAT2x4 0x8B66
-#define GL_FLOAT_MAT3x2 0x8B67
-#define GL_FLOAT_MAT3 0x8B5B
-#define GL_FLOAT_MAT3x4 0x8B68
-#define GL_FLOAT_MAT4x2 0x8B69
-#define GL_FLOAT_MAT4x3 0x8B6A
-#define GL_FLOAT_MAT4 0x8B5C
-#define GL_SAMPLER_2D 0x8B5E
-#define GL_SAMPLER_3D 0x8B5F
-#define GL_SAMPLER_CUBE 0x8B60
+#    define GL_BOOL 0x8B56
+#    define GL_BOOL_VEC2 0x8B57
+#    define GL_BOOL_VEC3 0x8B58
+#    define GL_BOOL_VEC4 0x8B59
+#    define GL_INT 0x1404
+#    define GL_INT_VEC2 0x8B53
+#    define GL_INT_VEC3 0x8B54
+#    define GL_INT_VEC4 0x8B55
+#    define GL_FLOAT 0x1406
+#    define GL_FLOAT_VEC2 0x8B50
+#    define GL_FLOAT_VEC3 0x8B51
+#    define GL_FLOAT_VEC4 0x8B52
+#    define GL_FLOAT_MAT2 0x8B5A
+#    define GL_FLOAT_MAT2x3 0x8B65
+#    define GL_FLOAT_MAT2x4 0x8B66
+#    define GL_FLOAT_MAT3x2 0x8B67
+#    define GL_FLOAT_MAT3 0x8B5B
+#    define GL_FLOAT_MAT3x4 0x8B68
+#    define GL_FLOAT_MAT4x2 0x8B69
+#    define GL_FLOAT_MAT4x3 0x8B6A
+#    define GL_FLOAT_MAT4 0x8B5C
+#    define GL_SAMPLER_2D 0x8B5E
+#    define GL_SAMPLER_3D 0x8B5F
+#    define GL_SAMPLER_CUBE 0x8B60
 
-#define GL_TEXTURE_1D 0x0DE0
-#define GL_TEXTURE_2D 0x0DE1
-#define GL_TEXTURE_3D 0x806F
-#define GL_TEXTURE_CUBE_MAP 0x8513
-#define GL_TEXTURE_1D_ARRAY 0x8C18
-#define GL_TEXTURE_2D_ARRAY 0x8C1A
-#define GL_TEXTURE_CUBE_MAP_ARRAY 0x9009
+#    define GL_TEXTURE_1D 0x0DE0
+#    define GL_TEXTURE_2D 0x0DE1
+#    define GL_TEXTURE_3D 0x806F
+#    define GL_TEXTURE_CUBE_MAP 0x8513
+#    define GL_TEXTURE_1D_ARRAY 0x8C18
+#    define GL_TEXTURE_2D_ARRAY 0x8C1A
+#    define GL_TEXTURE_CUBE_MAP_ARRAY 0x9009
 
-#define GL_NEAREST 0x2600
-#define GL_LINEAR 0x2601
-#define GL_NEAREST_MIPMAP_NEAREST 0x2700
-#define GL_LINEAR_MIPMAP_NEAREST 0x2701
-#define GL_NEAREST_MIPMAP_LINEAR 0x2702
-#define GL_LINEAR_MIPMAP_LINEAR 0x2703
+#    define GL_NEAREST 0x2600
+#    define GL_LINEAR 0x2601
+#    define GL_NEAREST_MIPMAP_NEAREST 0x2700
+#    define GL_LINEAR_MIPMAP_NEAREST 0x2701
+#    define GL_NEAREST_MIPMAP_LINEAR 0x2702
+#    define GL_LINEAR_MIPMAP_LINEAR 0x2703
 
-#define GL_REPEAT 0x2901
-#define GL_CLAMP_TO_EDGE 0x812F
-#define GL_CLAMP_TO_BORDER 0x812D
+#    define GL_REPEAT 0x2901
+#    define GL_CLAMP_TO_EDGE 0x812F
+#    define GL_CLAMP_TO_BORDER 0x812D
 
-#define GL_VERTEX_SHADER 0x8B31
-#define GL_FRAGMENT_SHADER 0x8B30
+#    define GL_VERTEX_SHADER 0x8B31
+#    define GL_FRAGMENT_SHADER 0x8B30
 
-#define GL_BLEND 0x0BE2
-#define GL_DEPTH_TEST 0x0B71
-#define GL_DEPTH_WRITEMASK 0x0B72
-#define GL_CULL_FACE 0x0B44
-#define GL_POLYGON_OFFSET_FILL 0x8037
-#define GL_SAMPLE_ALPHA_TO_COVERAGE 0x809E
-#define GL_SCISSOR_TEST 0x0C11
+#    define GL_BLEND 0x0BE2
+#    define GL_DEPTH_TEST 0x0B71
+#    define GL_DEPTH_WRITEMASK 0x0B72
+#    define GL_CULL_FACE 0x0B44
+#    define GL_POLYGON_OFFSET_FILL 0x8037
+#    define GL_SAMPLE_ALPHA_TO_COVERAGE 0x809E
+#    define GL_SCISSOR_TEST 0x0C11
 
-#define GL_CW 0x0900
-#define GL_CCW 0x0901
+#    define GL_CW 0x0900
+#    define GL_CCW 0x0901
 
-#define GL_NONE 0
-#define GL_FRONT 0x0404
-#define GL_BACK 0x0405
+#    define GL_NONE 0
+#    define GL_FRONT 0x0404
+#    define GL_BACK 0x0405
 
-#define GL_NEVER 0x0200
-#define GL_LESS 0x0201
-#define GL_EQUAL 0x0202
-#define GL_LEQUAL 0x0203
-#define GL_GREATER 0x0204
-#define GL_NOTEQUAL 0x0205
-#define GL_GEQUAL 0x0206
-#define GL_ALWAYS 0x0207
+#    define GL_NEVER 0x0200
+#    define GL_LESS 0x0201
+#    define GL_EQUAL 0x0202
+#    define GL_LEQUAL 0x0203
+#    define GL_GREATER 0x0204
+#    define GL_NOTEQUAL 0x0205
+#    define GL_GEQUAL 0x0206
+#    define GL_ALWAYS 0x0207
 
-#define GL_FUNC_ADD 0x8006
-#define GL_FUNC_SUBTRACT 0x800A
-#define GL_FUNC_REVERSE_SUBTRACT 0x800B
-#define GL_MIN 0x8007
-#define GL_MAX 0x8008
+#    define GL_FUNC_ADD 0x8006
+#    define GL_FUNC_SUBTRACT 0x800A
+#    define GL_FUNC_REVERSE_SUBTRACT 0x800B
+#    define GL_MIN 0x8007
+#    define GL_MAX 0x8008
 
-#define GL_ZERO 0
-#define GL_ONE 1
-#define GL_SRC_COLOR 0x0300
-#define GL_ONE_MINUS_SRC_COLOR 0x0301
-#define GL_DST_COLOR 0x0306
-#define GL_ONE_MINUS_DST_COLOR 0x0307
-#define GL_SRC_ALPHA 0x0302
-#define GL_ONE_MINUS_SRC_ALPHA 0x0303
-#define GL_DST_ALPHA 0x0304
-#define GL_ONE_MINUS_DST_ALPHA 0x0305
-#define GL_CONSTANT_COLOR 0x8001
-#define GL_ONE_MINUS_CONSTANT_COLOR 0x8002
-#define GL_CONSTANT_ALPHA 0x8003
-#define GL_ONE_MINUS_CONSTANT_ALPHA 0x8004
-#define GL_SRC_ALPHA_SATURATE 0x0308
+#    define GL_ZERO 0
+#    define GL_ONE 1
+#    define GL_SRC_COLOR 0x0300
+#    define GL_ONE_MINUS_SRC_COLOR 0x0301
+#    define GL_DST_COLOR 0x0306
+#    define GL_ONE_MINUS_DST_COLOR 0x0307
+#    define GL_SRC_ALPHA 0x0302
+#    define GL_ONE_MINUS_SRC_ALPHA 0x0303
+#    define GL_DST_ALPHA 0x0304
+#    define GL_ONE_MINUS_DST_ALPHA 0x0305
+#    define GL_CONSTANT_COLOR 0x8001
+#    define GL_ONE_MINUS_CONSTANT_COLOR 0x8002
+#    define GL_CONSTANT_ALPHA 0x8003
+#    define GL_ONE_MINUS_CONSTANT_ALPHA 0x8004
+#    define GL_SRC_ALPHA_SATURATE 0x0308
 
 #endif
 
@@ -2745,7 +2745,7 @@ static void ksGltf_SortNodes(ksGltfNode *nodes, const int nodeCount) {
 }
 
 #if defined(_MSC_VER)
-#define strcasecmp _stricmp
+#    define strcasecmp _stricmp
 #endif
 
 static bool ksGltfScene_CreateFromFile(ksGpuContext *context, ksGltfScene *scene, ksSceneSettings *settings,
@@ -5180,5 +5180,5 @@ static void ksGltfScene_Render(ksGpuCommandBuffer *commandBuffer, const ksGltfSc
     }
 }
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif

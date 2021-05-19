@@ -354,24 +354,24 @@ VERSION HISTORY
 */
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-#define OS_WINDOWS
+#    define OS_WINDOWS
 #elif defined(__ANDROID__)
-#define OS_ANDROID
+#    define OS_ANDROID
 #elif defined(__APPLE__)
-#define OS_APPLE
-#include <Availability.h>
-#if __IPHONE_OS_VERSION_MAX_ALLOWED
-#define OS_APPLE_IOS
-#elif __MAC_OS_X_VERSION_MAX_ALLOWED
-#define OS_APPLE_MACOS
-#endif
+#    define OS_APPLE
+#    include <Availability.h>
+#    if __IPHONE_OS_VERSION_MAX_ALLOWED
+#        define OS_APPLE_IOS
+#    elif __MAC_OS_X_VERSION_MAX_ALLOWED
+#        define OS_APPLE_MACOS
+#    endif
 #elif defined(__linux__)
-#define OS_LINUX
-#define OS_LINUX_XLIB  // Xlib + Xlib GLX 1.3
+#    define OS_LINUX
+#    define OS_LINUX_XLIB  // Xlib + Xlib GLX 1.3
 //#define OS_LINUX_XCB        // XCB + XCB GLX is limited to OpenGL 2.1
 //#define OS_LINUX_XCB_GLX    // XCB + Xlib GLX 1.3
 #else
-#error "unknown platform"
+#    error "unknown platform"
 #endif
 
 /*
@@ -382,117 +382,117 @@ Platform headers / declarations
 
 #if defined(OS_WINDOWS)
 
-#if !defined(_CRT_SECURE_NO_WARNINGS)
-#define _CRT_SECURE_NO_WARNINGS
-#endif
+#    if !defined(_CRT_SECURE_NO_WARNINGS)
+#        define _CRT_SECURE_NO_WARNINGS
+#    endif
 
-#if defined(_MSC_VER)
-#pragma warning(disable : 4204)  // nonstandard extension used : non-constant aggregate initializer
-#pragma warning(disable : 4221)  // nonstandard extension used: 'layers': cannot be initialized using address of automatic variable
-                                 // 'layerProjection'
-#pragma warning(disable : 4255)  // '<name>' : no function prototype given: converting '()' to '(void)'
-#pragma warning(disable : 4668)  // '__cplusplus' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-#pragma warning(disable : 4710)  // 'int printf(const char *const ,...)': function not inlined
-#pragma warning(disable : 4711)  // function '<name>' selected for automatic inline expansion
-#pragma warning(disable : 4738)  // storing 32-bit float result in memory, possible loss of performance
-#pragma warning(disable : 4820)  // '<name>' : 'X' bytes padding added after data member '<member>'
-#endif
+#    if defined(_MSC_VER)
+#        pragma warning(disable : 4204)  // nonstandard extension used : non-constant aggregate initializer
+#        pragma warning(disable : 4221)  // nonstandard extension used: 'layers': cannot be initialized using address of automatic
+                                         // variable 'layerProjection'
+#        pragma warning(disable : 4255)  // '<name>' : no function prototype given: converting '()' to '(void)'
+#        pragma warning(disable : 4668)  // '__cplusplus' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
+#        pragma warning(disable : 4710)  // 'int printf(const char *const ,...)': function not inlined
+#        pragma warning(disable : 4711)  // function '<name>' selected for automatic inline expansion
+#        pragma warning(disable : 4738)  // storing 32-bit float result in memory, possible loss of performance
+#        pragma warning(disable : 4820)  // '<name>' : 'X' bytes padding added after data member '<member>'
+#    endif
 
-#if _MSC_VER >= 1900
-#pragma warning(disable : 4464)  // relative include path contains '..'
-#pragma warning(disable : 4774)  // 'printf' : format string expected in argument 1 is not a string literal
-#endif
+#    if _MSC_VER >= 1900
+#        pragma warning(disable : 4464)  // relative include path contains '..'
+#        pragma warning(disable : 4774)  // 'printf' : format string expected in argument 1 is not a string literal
+#    endif
 
-#define OPENGL_VERSION_MAJOR 4
-#define OPENGL_VERSION_MINOR 3
-#define GLSL_VERSION "430"
-#define SPIRV_VERSION "99"
-#define USE_SYNC_OBJECT 0  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
+#    define OPENGL_VERSION_MAJOR 4
+#    define OPENGL_VERSION_MINOR 3
+#    define GLSL_VERSION "430"
+#    define SPIRV_VERSION "99"
+#    define USE_SYNC_OBJECT 0  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
 
-#include <windows.h>
-#include <GL/gl.h>
-#define GL_EXT_color_subtable
-#include <GL/glext.h>
-#include <GL/wglext.h>
-#include <GL/gl_format.h>
+#    include <windows.h>
+#    include <GL/gl.h>
+#    define GL_EXT_color_subtable
+#    include <GL/glext.h>
+#    include <GL/wglext.h>
+#    include <GL/gl_format.h>
 
-#define GRAPHICS_API_OPENGL 1
-#define OUTPUT_PATH ""
+#    define GRAPHICS_API_OPENGL 1
+#    define OUTPUT_PATH ""
 
-#define __thread __declspec(thread)
+#    define __thread __declspec(thread)
 
 #elif defined(OS_LINUX)
 
-#define OPENGL_VERSION_MAJOR 4
-#define OPENGL_VERSION_MINOR 3
-#define GLSL_VERSION "430"
-#define SPIRV_VERSION "99"
-#define USE_SYNC_OBJECT 0  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
+#    define OPENGL_VERSION_MAJOR 4
+#    define OPENGL_VERSION_MINOR 3
+#    define GLSL_VERSION "430"
+#    define SPIRV_VERSION "99"
+#    define USE_SYNC_OBJECT 0  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
 
-#if __STDC_VERSION__ >= 199901L
-#define _XOPEN_SOURCE 600
-#else
-#define _XOPEN_SOURCE 500
-#endif
+#    if __STDC_VERSION__ >= 199901L
+#        define _XOPEN_SOURCE 600
+#    else
+#        define _XOPEN_SOURCE 500
+#    endif
 
-#include <time.h>      // for timespec
-#include <sys/time.h>  // for gettimeofday()
-#if !defined(__USE_UNIX98)
-#define __USE_UNIX98 1  // for pthread_mutexattr_settype
-#endif
-#include <pthread.h>  // for pthread_create() etc.
-#include <malloc.h>   // for memalign
-#if defined(OS_LINUX_XLIB)
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#include <X11/extensions/xf86vmode.h>  // for fullscreen video mode
-#include <X11/extensions/Xrandr.h>     // for resolution changes
-#elif defined(OS_LINUX_XCB) || defined(OS_LINUX_XCB_GLX)
-#include <X11/keysym.h>
-#include <xcb/xcb.h>
-#include <xcb/xcb_keysyms.h>
-#include <xcb/xcb_icccm.h>
-#include <xcb/randr.h>
-#include <xcb/glx.h>
-#include <xcb/dri2.h>
-#endif
-#include <GL/glx.h>
-#include <GL/gl_format.h>
+#    include <time.h>      // for timespec
+#    include <sys/time.h>  // for gettimeofday()
+#    if !defined(__USE_UNIX98)
+#        define __USE_UNIX98 1  // for pthread_mutexattr_settype
+#    endif
+#    include <pthread.h>  // for pthread_create() etc.
+#    include <malloc.h>   // for memalign
+#    if defined(OS_LINUX_XLIB)
+#        include <X11/Xlib.h>
+#        include <X11/Xatom.h>
+#        include <X11/extensions/xf86vmode.h>  // for fullscreen video mode
+#        include <X11/extensions/Xrandr.h>     // for resolution changes
+#    elif defined(OS_LINUX_XCB) || defined(OS_LINUX_XCB_GLX)
+#        include <X11/keysym.h>
+#        include <xcb/xcb.h>
+#        include <xcb/xcb_keysyms.h>
+#        include <xcb/xcb_icccm.h>
+#        include <xcb/randr.h>
+#        include <xcb/glx.h>
+#        include <xcb/dri2.h>
+#    endif
+#    include <GL/glx.h>
+#    include <GL/gl_format.h>
 
-#define GRAPHICS_API_OPENGL 1
-#define OUTPUT_PATH ""
+#    define GRAPHICS_API_OPENGL 1
+#    define OUTPUT_PATH ""
 
 // These prototypes are only included when __USE_GNU is defined but that causes other compile errors.
 extern int pthread_setname_np(pthread_t __target_thread, __const char *__name);
 extern int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset);
 
-#pragma GCC diagnostic ignored "-Wunused-function"
+#    pragma GCC diagnostic ignored "-Wunused-function"
 
 #elif defined(OS_APPLE_MACOS)
 
 // Apple is still at OpenGL 4.1
-#define OPENGL_VERSION_MAJOR 4
-#define OPENGL_VERSION_MINOR 1
-#define GLSL_VERSION "410"
-#define SPIRV_VERSION "99"
-#define USE_SYNC_OBJECT 0  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
+#    define OPENGL_VERSION_MAJOR 4
+#    define OPENGL_VERSION_MINOR 1
+#    define GLSL_VERSION "410"
+#    define SPIRV_VERSION "99"
+#    define USE_SYNC_OBJECT 0  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
 
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/time.h>
-#include <pthread.h>
-#include <Cocoa/Cocoa.h>
-#define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
-#include <OpenGL/OpenGL.h>
-#include <OpenGL/gl3.h>
-#include <OpenGL/gl3ext.h>
-#include <GL/gl_format.h>
+#    include <sys/param.h>
+#    include <sys/sysctl.h>
+#    include <sys/time.h>
+#    include <pthread.h>
+#    include <Cocoa/Cocoa.h>
+#    define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
+#    include <OpenGL/OpenGL.h>
+#    include <OpenGL/gl3.h>
+#    include <OpenGL/gl3ext.h>
+#    include <GL/gl_format.h>
 
-#undef MAX
-#undef MIN
+#    undef MAX
+#    undef MIN
 
-#define GRAPHICS_API_OPENGL 1
-#define OUTPUT_PATH ""
+#    define GRAPHICS_API_OPENGL 1
+#    define OUTPUT_PATH ""
 
 // Undocumented CGS and CGL
 typedef void *CGSConnectionID;
@@ -503,51 +503,51 @@ CGLError CGLSetSurface(CGLContextObj ctx, CGSConnectionID cid, CGSWindowID wid, 
 CGLError CGLGetSurface(CGLContextObj ctx, CGSConnectionID *cid, CGSWindowID *wid, CGSSurfaceID *sid);
 CGLError CGLUpdateContext(CGLContextObj ctx);
 
-#pragma clang diagnostic ignored "-Wunused-function"
-#pragma clang diagnostic ignored "-Wunused-const-variable"
+#    pragma clang diagnostic ignored "-Wunused-function"
+#    pragma clang diagnostic ignored "-Wunused-const-variable"
 
 #elif defined(OS_APPLE_IOS)
 
 // FIXME:
 
-#define GRAPHICS_API_OPENGL_ES 1
+#    define GRAPHICS_API_OPENGL_ES 1
 
 #elif defined(OS_ANDROID)
 
-#define OPENGL_VERSION_MAJOR 3
-#define OPENGL_VERSION_MINOR 1
-#define GLSL_VERSION "310 es"
-#define SPIRV_VERSION "99"
-#define USE_SYNC_OBJECT 1  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
+#    define OPENGL_VERSION_MAJOR 3
+#    define OPENGL_VERSION_MINOR 1
+#    define GLSL_VERSION "310 es"
+#    define SPIRV_VERSION "99"
+#    define USE_SYNC_OBJECT 1  // 0 = GLsync, 1 = EGLSyncKHR, 2 = storage buffer
 
-#include <time.h>
-#include <unistd.h>
-#include <dirent.h>  // for opendir/closedir
-#include <pthread.h>
-#include <malloc.h>                     // for memalign
-#include <dlfcn.h>                      // for dlopen
-#include <sys/prctl.h>                  // for prctl( PR_SET_NAME )
-#include <sys/stat.h>                   // for gettid
-#include <sys/syscall.h>                // for syscall
-#include <android/log.h>                // for __android_log_print
-#include <android/input.h>              // for AKEYCODE_ etc.
-#include <android/window.h>             // for AWINDOW_FLAG_KEEP_SCREEN_ON
-#include <android/native_window_jni.h>  // for native window JNI
-#include <android_native_app_glue.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <GLES2/gl2ext.h>
-#include <GLES3/gl3.h>
-#if OPENGL_VERSION_MAJOR == 3 && OPENGL_VERSION_MINOR == 1
-#include <GLES3/gl31.h>
-#endif
-#include <GLES3/gl3ext.h>
-#include <GL/gl_format.h>
+#    include <time.h>
+#    include <unistd.h>
+#    include <dirent.h>  // for opendir/closedir
+#    include <pthread.h>
+#    include <malloc.h>                     // for memalign
+#    include <dlfcn.h>                      // for dlopen
+#    include <sys/prctl.h>                  // for prctl( PR_SET_NAME )
+#    include <sys/stat.h>                   // for gettid
+#    include <sys/syscall.h>                // for syscall
+#    include <android/log.h>                // for __android_log_print
+#    include <android/input.h>              // for AKEYCODE_ etc.
+#    include <android/window.h>             // for AWINDOW_FLAG_KEEP_SCREEN_ON
+#    include <android/native_window_jni.h>  // for native window JNI
+#    include <android_native_app_glue.h>
+#    include <EGL/egl.h>
+#    include <EGL/eglext.h>
+#    include <GLES2/gl2ext.h>
+#    include <GLES3/gl3.h>
+#    if OPENGL_VERSION_MAJOR == 3 && OPENGL_VERSION_MINOR == 1
+#        include <GLES3/gl31.h>
+#    endif
+#    include <GLES3/gl3ext.h>
+#    include <GL/gl_format.h>
 
-#define GRAPHICS_API_OPENGL_ES 1
-#define OUTPUT_PATH "/sdcard/"
+#    define GRAPHICS_API_OPENGL_ES 1
+#    define OUTPUT_PATH "/sdcard/"
 
-#pragma GCC diagnostic ignored "-Wunused-function"
+#    pragma GCC diagnostic ignored "-Wunused-function"
 
 typedef struct {
     JavaVM *vm;        // Java Virtual Machine
@@ -607,9 +607,9 @@ Common defines
 #define GL_FINISH_SYNC 1
 
 #if defined(OS_ANDROID)
-#define ES_HIGHP "highp"  // GLSL "310 es" requires a precision qualifier on a image2D
+#    define ES_HIGHP "highp"  // GLSL "310 es" requires a precision qualifier on a image2D
 #else
-#define ES_HIGHP ""  // GLSL "430" disallows a precision qualifier on a image2D
+#    define ES_HIGHP ""  // GLSL "430" disallows a precision qualifier on a image2D
 #endif
 
 /*
@@ -934,25 +934,25 @@ OpenGL error checking.
 */
 
 #if defined(_DEBUG)
-#define GL(func)                                 \
-    func;                                        \
-    ksFrameLog_Write(__FILE__, __LINE__, #func); \
-    GlCheckErrors(#func);
+#    define GL(func)                                 \
+        func;                                        \
+        ksFrameLog_Write(__FILE__, __LINE__, #func); \
+        GlCheckErrors(#func);
 #else
-#define GL(func) func;
+#    define GL(func) func;
 #endif
 
 #if defined(_DEBUG)
-#define EGL(func)                                                  \
-    ksFrameLog_Write(__FILE__, __LINE__, #func);                   \
-    if (func == EGL_FALSE) {                                       \
-        Error(#func " failed: %s", EglErrorString(eglGetError())); \
-    }
+#    define EGL(func)                                                  \
+        ksFrameLog_Write(__FILE__, __LINE__, #func);                   \
+        if (func == EGL_FALSE) {                                       \
+            Error(#func " failed: %s", EglErrorString(eglGetError())); \
+        }
 #else
-#define EGL(func)                                                  \
-    if (func == EGL_FALSE) {                                       \
-        Error(#func " failed: %s", EglErrorString(eglGetError())); \
-    }
+#    define EGL(func)                                                  \
+        if (func == EGL_FALSE) {                                       \
+            Error(#func " failed: %s", EglErrorString(eglGetError())); \
+        }
 #endif
 
 #if defined(OS_ANDROID)
@@ -1083,9 +1083,9 @@ Multi-view support
 */
 
 #if !defined(GL_OVR_multiview)
-#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_NUM_VIEWS_OVR 0x9630
-#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_BASE_VIEW_INDEX_OVR 0x9632
-#define GL_MAX_VIEWS_OVR 0x9631
+#    define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_NUM_VIEWS_OVR 0x9630
+#    define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_BASE_VIEW_INDEX_OVR 0x9632
+#    define GL_MAX_VIEWS_OVR 0x9631
 
 typedef void (*PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC)(GLenum target, GLenum attachment, GLuint texture, GLint level,
                                                         GLint baseViewIndex, GLsizei numViews);
@@ -1187,7 +1187,7 @@ PFNGLVERTEXATTRIBDIVISORPROC glVertexAttribDivisor;
 PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray;
 PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
 
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
 PFNGLACTIVETEXTUREPROC glActiveTexture;
 PFNGLTEXIMAGE3DPROC glTexImage3D;
 PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D;
@@ -1195,7 +1195,7 @@ PFNGLCOMPRESSEDTEXIMAGE3DPROC glCompressedTexImage3D;
 PFNGLTEXSUBIMAGE3DPROC glTexSubImage3D;
 PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC glCompressedTexSubImage2D;
 PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC glCompressedTexSubImage3D;
-#endif
+#    endif
 PFNGLTEXSTORAGE2DPROC glTexStorage2D;
 PFNGLTEXSTORAGE3DPROC glTexStorage3D;
 PFNGLTEXIMAGE2DMULTISAMPLEPROC glTexImage2DMultisample;
@@ -1270,17 +1270,17 @@ PFNGLISSYNCPROC glIsSync;
 PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
 PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate;
 
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
 PFNGLBLENDCOLORPROC glBlendColor;
 PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
 PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
 PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
 PFNWGLDELAYBEFORESWAPNVPROC wglDelayBeforeSwapNV;
-#elif defined(OS_LINUX)
+#    elif defined(OS_LINUX)
 PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB;
 PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT;
 PFNGLXDELAYBEFORESWAPNVPROC glXDelayBeforeSwapNV;
-#endif
+#    endif
 
 static void GlInitExtensions() {
     glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)GetExtension("glGenFramebuffers");
@@ -1323,7 +1323,7 @@ static void GlInitExtensions() {
     glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)GetExtension("glDisableVertexAttribArray");
     glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)GetExtension("glEnableVertexAttribArray");
 
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
     glActiveTexture = (PFNGLACTIVETEXTUREPROC)GetExtension("glActiveTexture");
     glTexImage3D = (PFNGLTEXIMAGE3DPROC)GetExtension("glTexImage3D");
     glCompressedTexImage2D = (PFNGLCOMPRESSEDTEXIMAGE2DPROC)GetExtension("glCompressedTexImage2D ");
@@ -1331,7 +1331,7 @@ static void GlInitExtensions() {
     glTexSubImage3D = (PFNGLTEXSUBIMAGE3DPROC)GetExtension("glTexSubImage3D");
     glCompressedTexSubImage2D = (PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)GetExtension("glCompressedTexSubImage2D");
     glCompressedTexSubImage3D = (PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)GetExtension("glCompressedTexSubImage3D");
-#endif
+#    endif
     glTexStorage2D = (PFNGLTEXSTORAGE2DPROC)GetExtension("glTexStorage2D");
     glTexStorage3D = (PFNGLTEXSTORAGE3DPROC)GetExtension("glTexStorage3D");
     glTexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)GetExtension("glTexImage2DMultisample");
@@ -1406,17 +1406,17 @@ static void GlInitExtensions() {
     glBlendFuncSeparate = (PFNGLBLENDFUNCSEPARATEPROC)GetExtension("glBlendFuncSeparate");
     glBlendEquationSeparate = (PFNGLBLENDEQUATIONSEPARATEPROC)GetExtension("glBlendEquationSeparate");
 
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
     glBlendColor = (PFNGLBLENDCOLORPROC)GetExtension("glBlendColor");
     wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)GetExtension("wglChoosePixelFormatARB");
     wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)GetExtension("wglCreateContextAttribsARB");
     wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)GetExtension("wglSwapIntervalEXT");
     wglDelayBeforeSwapNV = (PFNWGLDELAYBEFORESWAPNVPROC)GetExtension("wglDelayBeforeSwapNV");
-#elif defined(OS_LINUX)
+#    elif defined(OS_LINUX)
     glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)GetExtension("glXCreateContextAttribsARB");
     glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)GetExtension("glXSwapIntervalEXT");
     glXDelayBeforeSwapNV = (PFNGLXDELAYBEFORESWAPNVPROC)GetExtension("glXDelayBeforeSwapNV");
-#endif
+#    endif
 
     glExtensions.timer_query = GlCheckExtension("GL_EXT_timer_query");
     glExtensions.texture_clamp_to_border = true;  // always available
@@ -1455,25 +1455,25 @@ static void GlInitExtensions() {
 #elif defined(OS_ANDROID)
 
 // GL_EXT_disjoint_timer_query without _EXT
-#if !defined(GL_TIMESTAMP)
-#define GL_QUERY_COUNTER_BITS GL_QUERY_COUNTER_BITS_EXT
-#define GL_TIME_ELAPSED GL_TIME_ELAPSED_EXT
-#define GL_TIMESTAMP GL_TIMESTAMP_EXT
-#define GL_GPU_DISJOINT GL_GPU_DISJOINT_EXT
-#endif
+#    if !defined(GL_TIMESTAMP)
+#        define GL_QUERY_COUNTER_BITS GL_QUERY_COUNTER_BITS_EXT
+#        define GL_TIME_ELAPSED GL_TIME_ELAPSED_EXT
+#        define GL_TIMESTAMP GL_TIMESTAMP_EXT
+#        define GL_GPU_DISJOINT GL_GPU_DISJOINT_EXT
+#    endif
 
 // GL_EXT_buffer_storage without _EXT
-#if !defined(GL_BUFFER_STORAGE_FLAGS)
-#define GL_MAP_READ_BIT 0x0001                          // GL_MAP_READ_BIT_EXT
-#define GL_MAP_WRITE_BIT 0x0002                         // GL_MAP_WRITE_BIT_EXT
-#define GL_MAP_PERSISTENT_BIT 0x0040                    // GL_MAP_PERSISTENT_BIT_EXT
-#define GL_MAP_COHERENT_BIT 0x0080                      // GL_MAP_COHERENT_BIT_EXT
-#define GL_DYNAMIC_STORAGE_BIT 0x0100                   // GL_DYNAMIC_STORAGE_BIT_EXT
-#define GL_CLIENT_STORAGE_BIT 0x0200                    // GL_CLIENT_STORAGE_BIT_EXT
-#define GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT 0x00004000  // GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT
-#define GL_BUFFER_IMMUTABLE_STORAGE 0x821F              // GL_BUFFER_IMMUTABLE_STORAGE_EXT
-#define GL_BUFFER_STORAGE_FLAGS 0x8220                  // GL_BUFFER_STORAGE_FLAGS_EXT
-#endif
+#    if !defined(GL_BUFFER_STORAGE_FLAGS)
+#        define GL_MAP_READ_BIT 0x0001                          // GL_MAP_READ_BIT_EXT
+#        define GL_MAP_WRITE_BIT 0x0002                         // GL_MAP_WRITE_BIT_EXT
+#        define GL_MAP_PERSISTENT_BIT 0x0040                    // GL_MAP_PERSISTENT_BIT_EXT
+#        define GL_MAP_COHERENT_BIT 0x0080                      // GL_MAP_COHERENT_BIT_EXT
+#        define GL_DYNAMIC_STORAGE_BIT 0x0100                   // GL_DYNAMIC_STORAGE_BIT_EXT
+#        define GL_CLIENT_STORAGE_BIT 0x0200                    // GL_CLIENT_STORAGE_BIT_EXT
+#        define GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT 0x00004000  // GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT
+#        define GL_BUFFER_IMMUTABLE_STORAGE 0x821F              // GL_BUFFER_IMMUTABLE_STORAGE_EXT
+#        define GL_BUFFER_STORAGE_FLAGS 0x8220                  // GL_BUFFER_STORAGE_FLAGS_EXT
+#    endif
 
 typedef void(GL_APIENTRY *PFNGLBUFFERSTORAGEEXTPROC)(GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
 typedef void(GL_APIENTRY *PFNGLTEXSTORAGE3DMULTISAMPLEPROC)(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width,
@@ -1505,40 +1505,40 @@ PFNGLFRAMEBUFFERTEXTUREMULTISAMPLEMULTIVIEWOVRPROC glFramebufferTextureMultisamp
 
 PFNGLTEXSTORAGE3DMULTISAMPLEPROC glTexStorage3DMultisample;
 
-#if !defined(EGL_OPENGL_ES3_BIT)
-#define EGL_OPENGL_ES3_BIT 0x0040
-#endif
+#    if !defined(EGL_OPENGL_ES3_BIT)
+#        define EGL_OPENGL_ES3_BIT 0x0040
+#    endif
 
 // GL_EXT_texture_cube_map_array
-#if !defined(GL_TEXTURE_CUBE_MAP_ARRAY)
-#define GL_TEXTURE_CUBE_MAP_ARRAY 0x9009
-#endif
+#    if !defined(GL_TEXTURE_CUBE_MAP_ARRAY)
+#        define GL_TEXTURE_CUBE_MAP_ARRAY 0x9009
+#    endif
 
 // GL_EXT_texture_filter_anisotropic
-#if !defined(GL_TEXTURE_MAX_ANISOTROPY_EXT)
-#define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
-#define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT 0x84FF
-#endif
+#    if !defined(GL_TEXTURE_MAX_ANISOTROPY_EXT)
+#        define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
+#        define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT 0x84FF
+#    endif
 
 // GL_EXT_texture_border_clamp or GL_OES_texture_border_clamp
-#if !defined(GL_CLAMP_TO_BORDER)
-#define GL_CLAMP_TO_BORDER 0x812D
-#endif
+#    if !defined(GL_CLAMP_TO_BORDER)
+#        define GL_CLAMP_TO_BORDER 0x812D
+#    endif
 
 // No 1D textures in OpenGL ES.
-#if !defined(GL_TEXTURE_1D)
-#define GL_TEXTURE_1D 0x0DE0
-#endif
+#    if !defined(GL_TEXTURE_1D)
+#        define GL_TEXTURE_1D 0x0DE0
+#    endif
 
 // No 1D texture arrays in OpenGL ES.
-#if !defined(GL_TEXTURE_1D_ARRAY)
-#define GL_TEXTURE_1D_ARRAY 0x8C18
-#endif
+#    if !defined(GL_TEXTURE_1D_ARRAY)
+#        define GL_TEXTURE_1D_ARRAY 0x8C18
+#    endif
 
 // No multi-sampled texture arrays in OpenGL ES.
-#if !defined(GL_TEXTURE_2D_MULTISAMPLE_ARRAY)
-#define GL_TEXTURE_2D_MULTISAMPLE_ARRAY 0x9102
-#endif
+#    if !defined(GL_TEXTURE_2D_MULTISAMPLE_ARRAY)
+#        define GL_TEXTURE_2D_MULTISAMPLE_ARRAY 0x9102
+#    endif
 
 static void GlInitExtensions() {
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC)GetExtension("eglCreateSyncKHR");
@@ -1586,18 +1586,18 @@ Compute support
 
 #if defined(OS_APPLE_MACOS) && (OPENGL_VERSION_MAJOR * 10 + OPENGL_VERSION_MINOR < 43)
 
-#define OPENGL_COMPUTE_ENABLED 0
+#    define OPENGL_COMPUTE_ENABLED 0
 
-#define GL_SHADER_STORAGE_BUFFER 0x90D2
-#define GL_COMPUTE_SHADER 0x91B9
-#define GL_UNIFORM_BLOCK 0x92E2
-#define GL_SHADER_STORAGE_BLOCK 0x92E6
+#    define GL_SHADER_STORAGE_BUFFER 0x90D2
+#    define GL_COMPUTE_SHADER 0x91B9
+#    define GL_UNIFORM_BLOCK 0x92E2
+#    define GL_SHADER_STORAGE_BLOCK 0x92E6
 
-#define GL_TEXTURE_FETCH_BARRIER_BIT 0x00000008
-#define GL_TEXTURE_UPDATE_BARRIER_BIT 0x00000100
-#define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
-#define GL_FRAMEBUFFER_BARRIER_BIT 0x00000400
-#define GL_ALL_BARRIER_BITS 0xFFFFFFFF
+#    define GL_TEXTURE_FETCH_BARRIER_BIT 0x00000008
+#    define GL_TEXTURE_UPDATE_BARRIER_BIT 0x00000100
+#    define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
+#    define GL_FRAMEBUFFER_BARRIER_BIT 0x00000400
+#    define GL_ALL_BARRIER_BITS 0xFFFFFFFF
 
 static GLuint glGetProgramResourceIndex(GLuint program, GLenum programInterface, const GLchar *name) {
     assert(false);
@@ -1623,21 +1623,21 @@ static void glTexStorage3DMultisample(GLenum target, GLsizei samples, GLenum int
 
 #elif defined(OS_ANDROID) && (OPENGL_VERSION_MAJOR * 10 + OPENGL_VERSION_MINOR < 31)
 
-#define OPENGL_COMPUTE_ENABLED 0
+#    define OPENGL_COMPUTE_ENABLED 0
 
-#define GL_SHADER_STORAGE_BUFFER 0x90D2
-#define GL_COMPUTE_SHADER 0x91B9
-#define GL_UNIFORM_BLOCK 0x92E2
-#define GL_SHADER_STORAGE_BLOCK 0x92E6
+#    define GL_SHADER_STORAGE_BUFFER 0x90D2
+#    define GL_COMPUTE_SHADER 0x91B9
+#    define GL_UNIFORM_BLOCK 0x92E2
+#    define GL_SHADER_STORAGE_BLOCK 0x92E6
 
-#define GL_READ_ONLY 0x88B8
-#define GL_WRITE_ONLY 0x88B9
-#define GL_READ_WRITE 0x88BA
+#    define GL_READ_ONLY 0x88B8
+#    define GL_WRITE_ONLY 0x88B9
+#    define GL_READ_WRITE 0x88BA
 
-#define GL_TEXTURE_FETCH_BARRIER_BIT 0x00000008
-#define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
-#define GL_FRAMEBUFFER_BARRIER_BIT 0x00000400
-#define GL_ALL_BARRIER_BITS 0xFFFFFFFF
+#    define GL_TEXTURE_FETCH_BARRIER_BIT 0x00000008
+#    define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
+#    define GL_FRAMEBUFFER_BARRIER_BIT 0x00000400
+#    define GL_ALL_BARRIER_BITS 0xFFFFFFFF
 
 static GLuint glGetProgramResourceIndex(GLuint program, GLenum programInterface, const GLchar *name) {
     assert(false);
@@ -1655,16 +1655,16 @@ static void glMemoryBarrier(GLbitfield barriers) { assert(false); }
 
 #else
 
-#define OPENGL_COMPUTE_ENABLED 1
+#    define OPENGL_COMPUTE_ENABLED 1
 
 #endif
 
 #if !defined(GL_SR8_EXT)
-#define GL_SR8_EXT 0x8FBD
+#    define GL_SR8_EXT 0x8FBD
 #endif
 
 #if !defined(GL_SRG8_EXT)
-#define GL_SRG8_EXT 0x8FBE
+#    define GL_SRG8_EXT 0x8FBE
 #endif
 
 /*
@@ -3851,14 +3851,14 @@ static void ksGpuWindow_Destroy(ksGpuWindow *window) {
     ksGpuContext_Destroy(&window->context);
     ksGpuDevice_Destroy(&window->device);
 
-#if defined(OS_LINUX_XCB_GLX)
+#    if defined(OS_LINUX_XCB_GLX)
     glXDestroyWindow(window->xDisplay, window->glxWindow);
     XFlush(window->xDisplay);
     XCloseDisplay(window->xDisplay);
     window->xDisplay = NULL;
-#else
+#    else
     xcb_glx_delete_window(window->connection, window->glxWindow);
-#endif
+#    endif
 
     if (window->windowFullscreen) {
         ChangeVideoMode_XcbRandR_1_4(window->connection, window->screen, NULL, NULL, NULL, &window->desktopWidth,
@@ -3917,14 +3917,14 @@ static bool ksGpuWindow_Create(ksGpuWindow *window, ksDriverInstance *instance, 
     }
 
     ksGpuDevice_Create(&window->device, instance, queueInfo);
-#if defined(OS_LINUX_XCB_GLX)
+#    if defined(OS_LINUX_XCB_GLX)
     window->xDisplay = XOpenDisplay(displayName);
     ksGpuContext_CreateForSurface(&window->context, &window->device, queueIndex, colorFormat, depthFormat, sampleCount,
                                   window->xDisplay, screen_number);
-#else
+#    else
     ksGpuContext_CreateForSurface(&window->context, &window->device, queueIndex, colorFormat, depthFormat, sampleCount,
                                   window->connection, screen_number);
-#endif
+#    endif
 
     // Create the color map.
     window->colormap = xcb_generate_id(window->connection);
@@ -4024,13 +4024,13 @@ static bool ksGpuWindow_Create(ksGpuWindow *window, ksDriverInstance *instance, 
 
     window->key_symbols = xcb_key_symbols_alloc(window->connection);
 
-#if defined(OS_LINUX_XCB_GLX)
+#    if defined(OS_LINUX_XCB_GLX)
     window->glxWindow = glXCreateWindow(window->xDisplay, window->context.glxFBConfig, window->window, NULL);
-#else
+#    else
     window->glxWindow = xcb_generate_id(window->connection);
     xcb_glx_create_window(window->connection, screen_number, window->context.fbconfigid, window->window, window->glxWindow, 0,
                           NULL);
-#endif
+#    endif
 
     window->context.glxDrawable = window->glxWindow;
 
@@ -8104,7 +8104,7 @@ typedef struct {
     GLuint storageBuffer;
     GLuint *mappedBuffer;
 #else
-#error "invalid USE_SYNC_OBJECT setting"
+#    error "invalid USE_SYNC_OBJECT setting"
 #endif
 } ksGpuFence;
 
@@ -8151,7 +8151,7 @@ static void ksGpuFence_Create(ksGpuContext *context, ksGpuFence *fence) {
                                       GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT));
     GL(glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0));
 #else
-#error "invalid USE_SYNC_OBJECT setting"
+#    error "invalid USE_SYNC_OBJECT setting"
 #endif
 }
 
@@ -8178,7 +8178,7 @@ static void ksGpuFence_Destroy(ksGpuContext *context, ksGpuFence *fence) {
     GL(glDeleteProgram(fence->computeProgram));
     GL(glDeleteShader(fence->computeShader));
 #else
-#error "invalid USE_SYNC_OBJECT setting"
+#    error "invalid USE_SYNC_OBJECT setting"
 #endif
 }
 
@@ -8225,7 +8225,7 @@ static void ksGpuFence_Submit(ksGpuContext *context, ksGpuFence *fence) {
     // Note that some drivers may ignore a flush which could result in the storage buffer never being updated.
     GL(glFlush());
 #else
-#error "invalid USE_SYNC_OBJECT setting"
+#    error "invalid USE_SYNC_OBJECT setting"
 #endif
 }
 
@@ -8260,7 +8260,7 @@ static bool ksGpuFence_IsSignalled(ksGpuContext *context, ksGpuFence *fence) {
         return true;
     }
 #else
-#error "invalid USE_SYNC_OBJECT setting"
+#    error "invalid USE_SYNC_OBJECT setting"
 #endif
     return false;
 }
@@ -9561,8 +9561,8 @@ static const ksGpuProgramParm barGraphComputeProgramParms[] = {
     {KS_GPU_PROGRAM_STAGE_FLAG_COMPUTE, KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT, KS_GPU_PROGRAM_PARM_ACCESS_READ_ONLY,
      COMPUTE_PROGRAM_UNIFORM_BAR_GRAPH_BAR_INDEX, "barIndex", 4}};
 
-#define BARGRAPH_LOCAL_SIZE_X 8
-#define BARGRAPH_LOCAL_SIZE_Y 8
+#    define BARGRAPH_LOCAL_SIZE_X 8
+#    define BARGRAPH_LOCAL_SIZE_Y 8
 
 static const char barGraphComputeProgramGLSL[] =
     "#version " GLSL_VERSION "\n"
@@ -9819,11 +9819,11 @@ static void ksBarGraph_RenderCompute(ksGpuCommandBuffer *commandBuffer, ksBarGra
     const int screenHeight = ksGpuFramebuffer_GetHeight(framebuffer);
     ksScreenRect screenRect = ksClipRect_ToScreenRect(&barGraph->clipRect, screenWidth, screenHeight);
     barGraph->compute.barGraphOffset.x = screenRect.x;
-#if defined(GRAPHICS_API_VULKAN)
+#    if defined(GRAPHICS_API_VULKAN)
     barGraph->compute.barGraphOffset.y = screenHeight - 1 - screenRect.y;
-#else
+#    else
     barGraph->compute.barGraphOffset.y = screenRect.y;
-#endif
+#    endif
 
     screenRect.width = ROUNDUP(screenRect.width, 8);
     screenRect.height = ROUNDUP(screenRect.height, 8);
@@ -9885,9 +9885,9 @@ static ksNanoseconds ksTimeWarpBarGraphs_GetGpuNanosecondsCompute( ksTimeWarpBar
 #define BARGRAPH_VIRTUAL_PIXELS_HIGH 1080
 
 #if defined(OS_ANDROID)
-#define BARGRAPH_INSET 64
+#    define BARGRAPH_INSET 64
 #else
-#define BARGRAPH_INSET 16
+#    define BARGRAPH_INSET 16
 #endif
 
 static const ksScreenRect eyeTextureFrameRateBarGraphRect = {BARGRAPH_INSET + 0 * 264, BARGRAPH_INSET, 256, 128};
@@ -10748,8 +10748,8 @@ static const ksGpuProgramParm timeWarpTransformComputeProgramParms[] = {
     {KS_GPU_PROGRAM_STAGE_FLAG_COMPUTE, KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X4,
      KS_GPU_PROGRAM_PARM_ACCESS_READ_ONLY, COMPUTE_PROGRAM_UNIFORM_TIMEWARP_END_TRANSFORM, "timeWarpEndTransform", 3}};
 
-#define TRANSFORM_LOCAL_SIZE_X 8
-#define TRANSFORM_LOCAL_SIZE_Y 8
+#    define TRANSFORM_LOCAL_SIZE_X 8
+#    define TRANSFORM_LOCAL_SIZE_Y 8
 
 static const char timeWarpTransformComputeProgramGLSL[] =
     "#version " GLSL_VERSION "\n"
@@ -10813,8 +10813,8 @@ static const ksGpuProgramParm timeWarpSpatialComputeProgramParms[] = {
     {KS_GPU_PROGRAM_STAGE_FLAG_COMPUTE, KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT, KS_GPU_PROGRAM_PARM_ACCESS_READ_ONLY,
      COMPUTE_PROGRAM_UNIFORM_TIMEWARP_IMAGE_LAYER, "imageLayer", 2}};
 
-#define SPATIAL_LOCAL_SIZE_X 8
-#define SPATIAL_LOCAL_SIZE_Y 8
+#    define SPATIAL_LOCAL_SIZE_X 8
+#    define SPATIAL_LOCAL_SIZE_Y 8
 
 static const char timeWarpSpatialComputeProgramGLSL[] =
     "#version " GLSL_VERSION "\n"
@@ -10865,8 +10865,8 @@ static const ksGpuProgramParm timeWarpChromaticComputeProgramParms[] = {
     {KS_GPU_PROGRAM_STAGE_FLAG_COMPUTE, KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT, KS_GPU_PROGRAM_PARM_ACCESS_READ_ONLY,
      COMPUTE_PROGRAM_UNIFORM_TIMEWARP_IMAGE_LAYER, "imageLayer", 2}};
 
-#define CHROMATIC_LOCAL_SIZE_X 8
-#define CHROMATIC_LOCAL_SIZE_Y 8
+#    define CHROMATIC_LOCAL_SIZE_X 8
+#    define CHROMATIC_LOCAL_SIZE_Y 8
 
 static const char timeWarpChromaticComputeProgramGLSL[] =
     "#version " GLSL_VERSION "\n"
@@ -11062,13 +11062,13 @@ static void ksTimeWarpCompute_Render(ksGpuCommandBuffer *commandBuffer, ksTimeWa
                                    (float)compute->hmdInfo.eyeTilesHigh / (compute->hmdInfo.eyeTilesHigh + 1) / eyePixelsHigh};
     const ksVector2f imageBias = {0.5f / (compute->hmdInfo.eyeTilesWide + 1), 0.5f / (compute->hmdInfo.eyeTilesHigh + 1)};
     const ksVector2i eyePixelOffset[NUM_EYES] = {
-#if defined(GRAPHICS_API_VULKAN)
+#    if defined(GRAPHICS_API_VULKAN)
         {0 * eyePixelsWide, screenHeight - eyePixelsHigh},
         {1 * eyePixelsWide, screenHeight - eyePixelsHigh}
-#else
+#    else
         {0 * eyePixelsWide, eyePixelsHigh},
         {1 * eyePixelsWide, eyePixelsHigh}
-#endif
+#    endif
     };
 
     for (int eye = 0; eye < NUM_EYES; eye++) {
@@ -11127,9 +11127,9 @@ static void ksTimeWarpCompute_Render(ksGpuCommandBuffer *commandBuffer, ksTimeWa
     gpuTimes[PROFILE_TIME_BAR_GRAPHS] = barGraphGpuTime;
     gpuTimes[PROFILE_TIME_BLIT] = 0;
 
-#if GL_FINISH_SYNC == 1
+#    if GL_FINISH_SYNC == 1
     GL(glFinish());
-#endif
+#    endif
 }
 
 #else
@@ -11790,9 +11790,9 @@ enum { QUEUE_INDEX_TIMEWARP = 0, QUEUE_INDEX_SCENE = 1 };
 #define NUM_EYE_BUFFERS 3
 
 #if defined(OS_ANDROID)
-#define WINDOW_RESOLUTION(x, fullscreen) (x)  // always fullscreen
+#    define WINDOW_RESOLUTION(x, fullscreen) (x)  // always fullscreen
 #else
-#define WINDOW_RESOLUTION(x, fullscreen) ((fullscreen) ? (x) : ROUNDUP(x / 2, 8))
+#    define WINDOW_RESOLUTION(x, fullscreen) ((fullscreen) ? (x) : ROUNDUP(x / 2, 8))
 #endif
 
 typedef struct {
@@ -12841,8 +12841,8 @@ int main(int argc, char *argv[]) {
 
 #elif defined(OS_ANDROID)
 
-#define MAX_ARGS 32
-#define MAX_ARGS_BUFFER 1024
+#    define MAX_ARGS 32
+#    define MAX_ARGS_BUFFER 1024
 
 typedef struct {
     char buffer[MAX_ARGS_BUFFER];

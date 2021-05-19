@@ -330,25 +330,25 @@ VERSION HISTORY
 */
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-#define OS_WINDOWS
+#    define OS_WINDOWS
 #elif defined(__ANDROID__)
-#define OS_ANDROID
+#    define OS_ANDROID
 #elif defined(__APPLE__)
-#define OS_APPLE
-#include <Availability.h>
-#if __IPHONE_OS_VERSION_MAX_ALLOWED
-#define OS_APPLE_IOS
-#elif __MAC_OS_X_VERSION_MAX_ALLOWED
-#define OS_APPLE_MACOS
-#endif
+#    define OS_APPLE
+#    include <Availability.h>
+#    if __IPHONE_OS_VERSION_MAX_ALLOWED
+#        define OS_APPLE_IOS
+#    elif __MAC_OS_X_VERSION_MAX_ALLOWED
+#        define OS_APPLE_MACOS
+#    endif
 #elif defined(__linux__)
-#define OS_LINUX
-#if defined(SUPPORT_X)
+#    define OS_LINUX
+#    if defined(SUPPORT_X)
 //#define OS_LINUX_XLIB
-#define OS_LINUX_XCB
-#endif
+#        define OS_LINUX_XCB
+#    endif
 #else
-#error "unknown platform"
+#    error "unknown platform"
 #endif
 
 /*
@@ -359,120 +359,120 @@ Platform headers / declarations
 
 #if defined(OS_WINDOWS)
 
-#if !defined(_CRT_SECURE_NO_WARNINGS)
-#define _CRT_SECURE_NO_WARNINGS
-#endif
+#    if !defined(_CRT_SECURE_NO_WARNINGS)
+#        define _CRT_SECURE_NO_WARNINGS
+#    endif
 
-#if defined(_MSC_VER)
-#pragma warning(disable : 4201)  // nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4204)  // nonstandard extension used : non-constant aggregate initializer
-#pragma warning(disable : 4255)  // '<name>' : no function prototype given: converting '()' to '(void)'
-#pragma warning(disable : 4668)  // '__cplusplus' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-#pragma warning(disable : 4710)  // 'int printf(const char *const ,...)': function not inlined
-#pragma warning(disable : 4711)  // function '<name>' selected for automatic inline expansion
-#pragma warning(disable : 4738)  // storing 32-bit float result in memory, possible loss of performance
-#pragma warning(disable : 4820)  // '<name>' : 'X' bytes padding added after data member '<member>'
-#endif
+#    if defined(_MSC_VER)
+#        pragma warning(disable : 4201)  // nonstandard extension used: nameless struct/union
+#        pragma warning(disable : 4204)  // nonstandard extension used : non-constant aggregate initializer
+#        pragma warning(disable : 4255)  // '<name>' : no function prototype given: converting '()' to '(void)'
+#        pragma warning(disable : 4668)  // '__cplusplus' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
+#        pragma warning(disable : 4710)  // 'int printf(const char *const ,...)': function not inlined
+#        pragma warning(disable : 4711)  // function '<name>' selected for automatic inline expansion
+#        pragma warning(disable : 4738)  // storing 32-bit float result in memory, possible loss of performance
+#        pragma warning(disable : 4820)  // '<name>' : 'X' bytes padding added after data member '<member>'
+#    endif
 
-#if _MSC_VER >= 1900
-#pragma warning(disable : 4464)  // relative include path contains '..'
-#pragma warning(disable : 4774)  // 'printf' : format string expected in argument 1 is not a string literal
-#endif
+#    if _MSC_VER >= 1900
+#        pragma warning(disable : 4464)  // relative include path contains '..'
+#        pragma warning(disable : 4774)  // 'printf' : format string expected in argument 1 is not a string literal
+#    endif
 
-#include <windows.h>
+#    include <windows.h>
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateWin32SurfaceKHR
-#define vkCreateSurfaceKHR vkCreateWin32SurfaceKHR
+#    define VK_USE_PLATFORM_WIN32_KHR
+#    define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#    define PFN_vkCreateSurfaceKHR PFN_vkCreateWin32SurfaceKHR
+#    define vkCreateSurfaceKHR vkCreateWin32SurfaceKHR
 
-#include "vulkan/vulkan.h"
-#include "vulkan/vk_sdk_platform.h"
-#include "vulkan/vk_format.h"
+#    include "vulkan/vulkan.h"
+#    include "vulkan/vk_sdk_platform.h"
+#    include "vulkan/vk_format.h"
 
-#define VULKAN_LOADER "vulkan-1.dll"
-#define OUTPUT_PATH ""
+#    define VULKAN_LOADER "vulkan-1.dll"
+#    define OUTPUT_PATH ""
 
-#define __thread __declspec(thread)
+#    define __thread __declspec(thread)
 
 #elif defined(OS_LINUX)
 
-#if __STDC_VERSION__ >= 199901L
-#define _XOPEN_SOURCE 600
-#else
-#define _XOPEN_SOURCE 500
-#endif
+#    if __STDC_VERSION__ >= 199901L
+#        define _XOPEN_SOURCE 600
+#    else
+#        define _XOPEN_SOURCE 500
+#    endif
 
-#include <time.h>      // for timespec
-#include <sys/time.h>  // for gettimeofday()
-#if !defined(__USE_UNIX98)
-#define __USE_UNIX98 1  // for pthread_mutexattr_settype
-#endif
-#include <pthread.h>  // for pthread_create() etc.
-#include <malloc.h>   // for memalign
-#include <dlfcn.h>    // for dlopen
-#if defined(OS_LINUX_XLIB)
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#include <X11/extensions/xf86vmode.h>  // for fullscreen video mode
-#include <X11/extensions/Xrandr.h>     // for resolution changes
-#elif defined(OS_LINUX_XCB)
-#include <X11/keysym.h>
-#include <xcb/xcb.h>
-#include <xcb/xcb_keysyms.h>
-#include <xcb/xcb_icccm.h>
-#include <xcb/randr.h>
-#endif
+#    include <time.h>      // for timespec
+#    include <sys/time.h>  // for gettimeofday()
+#    if !defined(__USE_UNIX98)
+#        define __USE_UNIX98 1  // for pthread_mutexattr_settype
+#    endif
+#    include <pthread.h>  // for pthread_create() etc.
+#    include <malloc.h>   // for memalign
+#    include <dlfcn.h>    // for dlopen
+#    if defined(OS_LINUX_XLIB)
+#        include <X11/Xlib.h>
+#        include <X11/Xatom.h>
+#        include <X11/extensions/xf86vmode.h>  // for fullscreen video mode
+#        include <X11/extensions/Xrandr.h>     // for resolution changes
+#    elif defined(OS_LINUX_XCB)
+#        include <X11/keysym.h>
+#        include <xcb/xcb.h>
+#        include <xcb/xcb_keysyms.h>
+#        include <xcb/xcb_icccm.h>
+#        include <xcb/randr.h>
+#    endif
 
-#if defined(OS_LINUX_XLIB)
-#define VK_USE_PLATFORM_XLIB_KHR
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_XLIB_SURFACE_EXTENSION_NAME
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateXlibSurfaceKHR
-#define vkCreateSurfaceKHR vkCreateXlibSurfaceKHR
-#elif defined(OS_LINUX_XCB)
-#define VK_USE_PLATFORM_XCB_KHR
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_XCB_SURFACE_EXTENSION_NAME
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateXcbSurfaceKHR
-#define vkCreateSurfaceKHR vkCreateXcbSurfaceKHR
-#endif
+#    if defined(OS_LINUX_XLIB)
+#        define VK_USE_PLATFORM_XLIB_KHR
+#        define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+#        define PFN_vkCreateSurfaceKHR PFN_vkCreateXlibSurfaceKHR
+#        define vkCreateSurfaceKHR vkCreateXlibSurfaceKHR
+#    elif defined(OS_LINUX_XCB)
+#        define VK_USE_PLATFORM_XCB_KHR
+#        define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#        define PFN_vkCreateSurfaceKHR PFN_vkCreateXcbSurfaceKHR
+#        define vkCreateSurfaceKHR vkCreateXcbSurfaceKHR
+#    endif
 
-#include "vulkan/vulkan.h"
-#include "vulkan/vk_sdk_platform.h"
-#include "vulkan/vk_format.h"
+#    include "vulkan/vulkan.h"
+#    include "vulkan/vk_sdk_platform.h"
+#    include "vulkan/vk_format.h"
 
-#define VULKAN_LOADER "libvulkan-1.so"
-#define OUTPUT_PATH ""
+#    define VULKAN_LOADER "libvulkan-1.so"
+#    define OUTPUT_PATH ""
 
 // These prototypes are only included when __USE_GNU is defined but that causes other compile errors.
 extern int pthread_setname_np(pthread_t __target_thread, __const char *__name);
 extern int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset);
 
-#pragma GCC diagnostic ignored "-Wunused-function"
+#    pragma GCC diagnostic ignored "-Wunused-function"
 
 #elif defined(OS_APPLE)
 
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/time.h>
-#include <pthread.h>
-#include <dlfcn.h>  // for dlopen
+#    include <sys/param.h>
+#    include <sys/sysctl.h>
+#    include <sys/time.h>
+#    include <pthread.h>
+#    include <dlfcn.h>  // for dlopen
 
-#include "vulkan/vulkan.h"
-#include "vulkan/vk_sdk_platform.h"
-#include "vulkan/vk_format.h"
+#    include "vulkan/vulkan.h"
+#    include "vulkan/vk_sdk_platform.h"
+#    include "vulkan/vk_format.h"
 
-#if defined(OS_APPLE_IOS)
-#include <UIKit/UIKit.h>
-#if defined(VK_USE_PLATFORM_IOS_MVK)
-#include <QuartzCore/CAMetalLayer.h>
-#include <MoltenVK/vk_mvk_moltenvk.h>
-#include <MoltenVK/vk_mvk_ios_surface.h>
-#define VkIOSSurfaceCreateInfoKHR VkIOSSurfaceCreateInfoMVK
-#define VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_KHR VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_MVK_IOS_SURFACE_EXTENSION_NAME
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateIOSSurfaceMVK
-#define vkCreateSurfaceKHR vkCreateIOSSurfaceMVK
-#else
+#    if defined(OS_APPLE_IOS)
+#        include <UIKit/UIKit.h>
+#        if defined(VK_USE_PLATFORM_IOS_MVK)
+#            include <QuartzCore/CAMetalLayer.h>
+#            include <MoltenVK/vk_mvk_moltenvk.h>
+#            include <MoltenVK/vk_mvk_ios_surface.h>
+#            define VkIOSSurfaceCreateInfoKHR VkIOSSurfaceCreateInfoMVK
+#            define VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_KHR VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK
+#            define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_MVK_IOS_SURFACE_EXTENSION_NAME
+#            define PFN_vkCreateSurfaceKHR PFN_vkCreateIOSSurfaceMVK
+#            define vkCreateSurfaceKHR vkCreateIOSSurfaceMVK
+#        else
 // Only here to make the code compile.
 typedef VkFlags VkIOSSurfaceCreateFlagsKHR;
 typedef struct VkIOSSurfaceCreateInfoKHR {
@@ -481,28 +481,28 @@ typedef struct VkIOSSurfaceCreateInfoKHR {
     VkIOSSurfaceCreateFlagsKHR flags;
     UIView *pView;
 } VkIOSSurfaceCreateInfoKHR;
-#define VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_KHR 1000015000
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME "VK_KHR_ios_surface"
+#            define VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_KHR 1000015000
+#            define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME "VK_KHR_ios_surface"
 typedef VkResult(VKAPI_PTR *PFN_vkCreateIOSSurfaceKHR)(VkInstance instance, const VkIOSSurfaceCreateInfoKHR *pCreateInfo,
                                                        const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateIOSSurfaceKHR
-#define vkCreateSurfaceKHR vkCreateIOSSurfaceKHR
-#define VULKAN_LOADER "libvulkan.dylib"
-#endif
-#endif
+#            define PFN_vkCreateSurfaceKHR PFN_vkCreateIOSSurfaceKHR
+#            define vkCreateSurfaceKHR vkCreateIOSSurfaceKHR
+#            define VULKAN_LOADER "libvulkan.dylib"
+#        endif
+#    endif
 
-#if defined(OS_APPLE_MACOS)
-#include <AppKit/AppKit.h>
-#if defined(VK_USE_PLATFORM_MACOS_MVK)
-#include <QuartzCore/CAMetalLayer.h>
-#include <MoltenVK/vk_mvk_moltenvk.h>
-#include <MoltenVK/vk_mvk_macos_surface.h>
-#define VkMacOSSurfaceCreateInfoKHR VkMacOSSurfaceCreateInfoMVK
-#define VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_KHR VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_MVK_MACOS_SURFACE_EXTENSION_NAME
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateMacOSSurfaceMVK
-#define vkCreateSurfaceKHR vkCreateMacOSSurfaceMVK
-#else
+#    if defined(OS_APPLE_MACOS)
+#        include <AppKit/AppKit.h>
+#        if defined(VK_USE_PLATFORM_MACOS_MVK)
+#            include <QuartzCore/CAMetalLayer.h>
+#            include <MoltenVK/vk_mvk_moltenvk.h>
+#            include <MoltenVK/vk_mvk_macos_surface.h>
+#            define VkMacOSSurfaceCreateInfoKHR VkMacOSSurfaceCreateInfoMVK
+#            define VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_KHR VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK
+#            define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_MVK_MACOS_SURFACE_EXTENSION_NAME
+#            define PFN_vkCreateSurfaceKHR PFN_vkCreateMacOSSurfaceMVK
+#            define vkCreateSurfaceKHR vkCreateMacOSSurfaceMVK
+#        else
 // Only here to make the code compile.
 typedef VkFlags VkMacOSSurfaceCreateFlagsKHR;
 typedef struct VkMacOSSurfaceCreateInfoKHR {
@@ -511,53 +511,53 @@ typedef struct VkMacOSSurfaceCreateInfoKHR {
     VkMacOSSurfaceCreateFlagsKHR flags;
     NSView *pView;
 } VkMacOSSurfaceCreateInfoKHR;
-#define VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_KHR 1000015000
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME "VK_KHR_macos_surface"
+#            define VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_KHR 1000015000
+#            define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME "VK_KHR_macos_surface"
 typedef VkResult(VKAPI_PTR *PFN_vkCreateMacOSSurfaceKHR)(VkInstance instance, const VkMacOSSurfaceCreateInfoKHR *pCreateInfo,
                                                          const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateMacOSSurfaceKHR
-#define vkCreateSurfaceKHR vkCreateMacOSSurfaceKHR
-#define VULKAN_LOADER "libvulkan.dylib"
-#endif
-#endif
+#            define PFN_vkCreateSurfaceKHR PFN_vkCreateMacOSSurfaceKHR
+#            define vkCreateSurfaceKHR vkCreateMacOSSurfaceKHR
+#            define VULKAN_LOADER "libvulkan.dylib"
+#        endif
+#    endif
 
-#undef MAX
-#undef MIN
-#define OUTPUT_PATH ""
+#    undef MAX
+#    undef MIN
+#    define OUTPUT_PATH ""
 
-#pragma clang diagnostic ignored "-Wunused-function"
-#pragma clang diagnostic ignored "-Wunused-const-variable"
+#    pragma clang diagnostic ignored "-Wunused-function"
+#    pragma clang diagnostic ignored "-Wunused-const-variable"
 
 #elif defined(OS_ANDROID)
 
-#include <time.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <ctype.h>                      // for isdigit, isspace
-#include <malloc.h>                     // for memalign
-#include <dlfcn.h>                      // for dlopen
-#include <sys/prctl.h>                  // for prctl( PR_SET_NAME )
-#include <sys/stat.h>                   // for gettid
-#include <sys/syscall.h>                // for syscall
-#include <android/log.h>                // for __android_log_print
-#include <android/input.h>              // for AKEYCODE_ etc.
-#include <android/window.h>             // for AWINDOW_FLAG_KEEP_SCREEN_ON
-#include <android/native_window_jni.h>  // for native window JNI
-#include <android_native_app_glue.h>
+#    include <time.h>
+#    include <unistd.h>
+#    include <pthread.h>
+#    include <ctype.h>                      // for isdigit, isspace
+#    include <malloc.h>                     // for memalign
+#    include <dlfcn.h>                      // for dlopen
+#    include <sys/prctl.h>                  // for prctl( PR_SET_NAME )
+#    include <sys/stat.h>                   // for gettid
+#    include <sys/syscall.h>                // for syscall
+#    include <android/log.h>                // for __android_log_print
+#    include <android/input.h>              // for AKEYCODE_ etc.
+#    include <android/window.h>             // for AWINDOW_FLAG_KEEP_SCREEN_ON
+#    include <android/native_window_jni.h>  // for native window JNI
+#    include <android_native_app_glue.h>
 
-#define VK_USE_PLATFORM_ANDROID_KHR
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateAndroidSurfaceKHR
-#define vkCreateSurfaceKHR vkCreateAndroidSurfaceKHR
+#    define VK_USE_PLATFORM_ANDROID_KHR
+#    define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#    define PFN_vkCreateSurfaceKHR PFN_vkCreateAndroidSurfaceKHR
+#    define vkCreateSurfaceKHR vkCreateAndroidSurfaceKHR
 
-#include "vulkan/vulkan.h"
-#include "vulkan/vk_sdk_platform.h"
-#include "vulkan/vk_format.h"
+#    include "vulkan/vulkan.h"
+#    include "vulkan/vk_sdk_platform.h"
+#    include "vulkan/vk_format.h"
 
-#define VULKAN_LOADER "libvulkan.so"
-#define OUTPUT_PATH "/sdcard/"
+#    define VULKAN_LOADER "libvulkan.so"
+#    define OUTPUT_PATH "/sdcard/"
 
-#pragma GCC diagnostic ignored "-Wunused-function"
+#    pragma GCC diagnostic ignored "-Wunused-function"
 
 typedef struct {
     JavaVM *vm;        // Java Virtual Machine
@@ -568,9 +568,9 @@ typedef struct {
 #endif
 
 #if defined(OS_NEUTRAL_DISPLAY_SURFACE)
-#define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_DISPLAY_EXTENSION_NAME
-#define PFN_vkCreateSurfaceKHR PFN_vkCreateDisplayPlaneSurfaceKHR
-#define vkCreateSurfaceKHR vkCreateDisplayPlaneSurfaceKHR
+#    define VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME VK_KHR_DISPLAY_EXTENSION_NAME
+#    define PFN_vkCreateSurfaceKHR PFN_vkCreateDisplayPlaneSurfaceKHR
+#    define vkCreateSurfaceKHR vkCreateDisplayPlaneSurfaceKHR
 #endif
 
 #define GRAPHICS_API_VULKAN 1
@@ -629,9 +629,9 @@ Common defines
 #define ICD_SPV_MAGIC 0x07230203
 
 #if USE_SPIRV == 1
-#define PROGRAM(name) name##SPIRV
+#    define PROGRAM(name) name##SPIRV
 #else
-#define PROGRAM(name) name##GLSL
+#    define PROGRAM(name) name##GLSL
 #endif
 
 #define SPIRV_VERSION "99"
@@ -641,13 +641,13 @@ Common defines
     "#extension GL_ARB_enhanced_layouts : enable\n"
 
 #if !defined(VK_API_VERSION_1_0)
-#define VK_API_VERSION_1_0 VK_API_VERSION
+#    define VK_API_VERSION_1_0 VK_API_VERSION
 #endif
 
 #if !defined(VK_VERSION_MAJOR)
-#define VK_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
-#define VK_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
-#define VK_VERSION_PATCH(version) ((uint32_t)(version)&0xfff)
+#    define VK_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
+#    define VK_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
+#    define VK_VERSION_PATCH(version) ((uint32_t)(version)&0xfff)
 #endif
 
 /*
@@ -972,22 +972,22 @@ Vulkan error checking.
 */
 
 #if defined(_DEBUG)
-#define VK(func)                \
-    VkCheckErrors(func, #func); \
-    ksFrameLog_Write(__FILE__, __LINE__, #func);
-#define VC(func) \
-    func;        \
-    ksFrameLog_Write(__FILE__, __LINE__, #func);
+#    define VK(func)                \
+        VkCheckErrors(func, #func); \
+        ksFrameLog_Write(__FILE__, __LINE__, #func);
+#    define VC(func) \
+        func;        \
+        ksFrameLog_Write(__FILE__, __LINE__, #func);
 #else
-#define VK(func) VkCheckErrors(func, #func);
-#define VC(func) func;
+#    define VK(func) VkCheckErrors(func, #    func);
+#    define VC(func) func;
 #endif
 
 #define VK_ERROR_INVALID_SHADER_NV -1002
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4061)
+#    pragma warning(push)
+#    pragma warning(disable : 4061)
 #endif
 const char *VkErrorString(VkResult result) {
     switch (result) {
@@ -1047,7 +1047,7 @@ const char *VkErrorString(VkResult result) {
 }
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif
 
 static void VkCheckErrors(VkResult result, const char *function) {
@@ -2380,8 +2380,8 @@ static bool ksGpuSwapchain_Create(ksGpuContext *context, ksGpuSwapchain *swapcha
     Print("--------------------------------\n");
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4061)
+#    pragma warning(push)
+#    pragma warning(disable : 4061)
 #endif
     for (uint32_t i = 0; i < formatCount; i++) {
         const char *formatString = NULL;
@@ -2416,7 +2416,7 @@ static bool ksGpuSwapchain_Create(ksGpuContext *context, ksGpuSwapchain *swapcha
     }
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif
     free(surfaceFormats);
     surfaceFormats = NULL;
@@ -2450,8 +2450,8 @@ static bool ksGpuSwapchain_Create(ksGpuContext *context, ksGpuSwapchain *swapcha
     }
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4061)
+#    pragma warning(push)
+#    pragma warning(disable : 4061)
 #endif
     for (uint32_t i = 0; i < presentModeCount; i++) {
         const char *formatString = NULL;
@@ -2480,7 +2480,7 @@ static bool ksGpuSwapchain_Create(ksGpuContext *context, ksGpuSwapchain *swapcha
     }
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif
     free(presentModes);
     presentModes = NULL;
@@ -4342,7 +4342,7 @@ NSAutoreleasePool *autoReleasePool;
 - (void)keyDown:(NSEvent *)event {
 }
 
-#if defined(VK_USE_PLATFORM_MACOS_MVK)
+#    if defined(VK_USE_PLATFORM_MACOS_MVK)
 
 - (instancetype)initWithFrame:(NSRect)frameRect {
     self = [super initWithFrame:frameRect];
@@ -4365,7 +4365,7 @@ NSAutoreleasePool *autoReleasePool;
     return layer;
 }
 
-#endif
+#    endif
 
 @end
 
@@ -6131,8 +6131,8 @@ static bool ksGpuTexture_CreateInternal(ksGpuContext *context, ksGpuTexture *tex
                     bufferImageCopyIndex++;
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4061)
+#    pragma warning(push)
+#    pragma warning(disable : 4061)
 #endif
                     uint32_t mipSize = 0;
                     switch (format) {
@@ -6590,7 +6590,7 @@ static bool ksGpuTexture_CreateInternal(ksGpuContext *context, ksGpuTexture *tex
                     }
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif
                     assert(dataOffset + mipSize <= dataSize);
 
@@ -11193,9 +11193,9 @@ static ksNanoseconds ksTimeWarpBarGraphs_GetGpuNanosecondsCompute( ksTimeWarpBar
 #define BARGRAPH_VIRTUAL_PIXELS_HIGH 1080
 
 #if defined(OS_ANDROID)
-#define BARGRAPH_INSET 64
+#    define BARGRAPH_INSET 64
 #else
-#define BARGRAPH_INSET 16
+#    define BARGRAPH_INSET 16
 #endif
 
 static const ksScreenRect eyeTextureFrameRateBarGraphRect = {BARGRAPH_INSET + 0 * 264, BARGRAPH_INSET, 256, 128};
@@ -13517,9 +13517,9 @@ enum { QUEUE_INDEX_TIMEWARP = 0, QUEUE_INDEX_SCENE = 1 };
 #define NUM_EYE_BUFFERS 3
 
 #if defined(OS_ANDROID)
-#define WINDOW_RESOLUTION(x, fullscreen) (x)  // always fullscreen
+#    define WINDOW_RESOLUTION(x, fullscreen) (x)  // always fullscreen
 #else
-#define WINDOW_RESOLUTION(x, fullscreen) ((fullscreen) ? (x) : ROUNDUP(x / 2, 8))
+#    define WINDOW_RESOLUTION(x, fullscreen) ((fullscreen) ? (x) : ROUNDUP(x / 2, 8))
 #endif
 
 typedef struct {
@@ -14584,8 +14584,8 @@ int main(int argc, char *argv[]) {
 
 #elif defined(OS_ANDROID)
 
-#define MAX_ARGS 32
-#define MAX_ARGS_BUFFER 1024
+#    define MAX_ARGS 32
+#    define MAX_ARGS_BUFFER 1024
 
 typedef struct {
     char buffer[MAX_ARGS_BUFFER];

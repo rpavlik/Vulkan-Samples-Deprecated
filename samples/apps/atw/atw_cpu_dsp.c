@@ -126,23 +126,23 @@ VERSION HISTORY
 */
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-#define OS_WINDOWS
+#    define OS_WINDOWS
 #elif defined(__ANDROID__)
-#define OS_ANDROID
+#    define OS_ANDROID
 #elif defined(__hexagon__) || defined(__qdsp6__)
-#define OS_HEXAGON
+#    define OS_HEXAGON
 #elif defined(__APPLE__)
-#define OS_APPLE
-#include <Availability.h>
-#if __IPHONE_OS_VERSION_MAX_ALLOWED
-#define OS_APPLE_IOS
-#elif __MAC_OS_X_VERSION_MAX_ALLOWED
-#define OS_APPLE_MACOS
-#endif
+#    define OS_APPLE
+#    include <Availability.h>
+#    if __IPHONE_OS_VERSION_MAX_ALLOWED
+#        define OS_APPLE_IOS
+#    elif __MAC_OS_X_VERSION_MAX_ALLOWED
+#        define OS_APPLE_MACOS
+#    endif
 #elif defined(__linux__)
-#define OS_LINUX
+#    define OS_LINUX
 #else
-#error "unknown platform"
+#    error "unknown platform"
 #endif
 
 #if defined(OS_WINDOWS)
@@ -153,70 +153,71 @@ Windows, x86 or x64
 ================================
 */
 
-#if !defined(_CRT_SECURE_NO_WARNINGS)
-#define _CRT_SECURE_NO_WARNINGS
-#endif
+#    if !defined(_CRT_SECURE_NO_WARNINGS)
+#        define _CRT_SECURE_NO_WARNINGS
+#    endif
 
-#if defined(_MSC_VER)
-#pragma warning(disable : 4204)  // nonstandard extension used : non-constant aggregate initializer
-#pragma warning(disable : 4255)  // '<name>' : no function prototype given: converting '()' to '(void)'
-#pragma warning(disable : 4668)  // '__cplusplus' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
-#pragma warning(disable : 4710)  // 'int printf(const char *const ,...)': function not inlined
-#pragma warning(disable : 4711)  // function '<name>' selected for automatic inline expansion
-#pragma warning(disable : 4738)  // storing 32-bit float result in memory, possible loss of performance
-#pragma warning(disable : 4820)  // '<name>' : 'X' bytes padding added after data member '<member>'
-#endif
+#    if defined(_MSC_VER)
+#        pragma warning(disable : 4204)  // nonstandard extension used : non-constant aggregate initializer
+#        pragma warning(disable : 4255)  // '<name>' : no function prototype given: converting '()' to '(void)'
+#        pragma warning(disable : 4668)  // '__cplusplus' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
+#        pragma warning(disable : 4710)  // 'int printf(const char *const ,...)': function not inlined
+#        pragma warning(disable : 4711)  // function '<name>' selected for automatic inline expansion
+#        pragma warning(disable : 4738)  // storing 32-bit float result in memory, possible loss of performance
+#        pragma warning(disable : 4820)  // '<name>' : 'X' bytes padding added after data member '<member>'
+#    endif
 
-#if _MSC_VER >= 1900
-#pragma warning(disable : 4464)  // relative include path contains '..'
-#pragma warning(disable : 4774)  // 'printf' : format string expected in argument 1 is not a string literal
-#endif
+#    if _MSC_VER >= 1900
+#        pragma warning(disable : 4464)  // relative include path contains '..'
+#        pragma warning(disable : 4774)  // 'printf' : format string expected in argument 1 is not a string literal
+#    endif
 
-#if defined(__ICL)
-#pragma warning(disable : 2415)  // variable X of static storage duration was declared but never referenced
-#endif
+#    if defined(__ICL)
+#        pragma warning(disable : 2415)  // variable X of static storage duration was declared but never referenced
+#    endif
 
-#include <Windows.h>  // for InterlockedIncrement(), VirtualAlloc(), VirtualFree()
-#include <stdio.h>    // for printf()
-#include <stdint.h>   // for uint32_t etc.
-#include <stdbool.h>  // for bool
-#include <assert.h>   // for assert()
-#include <math.h>     // for tanf()
-#include <intrin.h>   // for SSE intrinsics
+#    include <Windows.h>  // for InterlockedIncrement(), VirtualAlloc(), VirtualFree()
+#    include <stdio.h>    // for printf()
+#    include <stdint.h>   // for uint32_t etc.
+#    include <stdbool.h>  // for bool
+#    include <assert.h>   // for assert()
+#    include <math.h>     // for tanf()
+#    include <intrin.h>   // for SSE intrinsics
 
-#if 0  // using the hardware prefetcher works well
-#define CACHE_LINE_SIZE 64
-#define PrefetchLinear(a, b)                                 \
-    for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
-        _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
-    }
-#define PrefetchBox(a, w, h, s)                                            \
-    for (int r = 0; r < (h); r++) {                                        \
-        for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
-            _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
-        }                                                                  \
-    }
-#define ZeroCacheLinear(a, b) \
-    do {                      \
-    } while ((a) && (b) && 0)
-#define ZeroCacheBox(a, w, h, s) \
-    do {                         \
-    } while ((a) && (w) && (h) && (s) && 0)
-#define FlushCacheLinear(a, b) \
-    do {                       \
-    } while ((a) && (b) && 0)
-#define FlushCacheBox(a, w, h, s) \
-    do {                          \
-    } while ((a) && (w) && (h) && (s) && 0)
-#endif
+#    if 0  // using the hardware prefetcher works well
+#        define CACHE_LINE_SIZE 64
+#        define PrefetchLinear(a, b)                                 \
+            for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
+                _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
+            }
+#        define PrefetchBox(a, w, h, s)                                            \
+            for (int r = 0; r < (h); r++) {                                        \
+                for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
+                    _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
+                }                                                                  \
+            }
+#        define ZeroCacheLinear(a, b) \
+            do {                      \
+            } while ((a) && (b) && 0)
+#        define ZeroCacheBox(a, w, h, s) \
+            do {                         \
+            } while ((a) && (w) && (h) && (s) && 0)
+#        define FlushCacheLinear(a, b) \
+            do {                       \
+            } while ((a) && (b) && 0)
+#        define FlushCacheBox(a, w, h, s) \
+            do {                          \
+            } while ((a) && (w) && (h) && (s) && 0)
+#    endif
 
-#define INLINE __inline
-#define Print(...) printf(__VA_ARGS__)
+#    define INLINE __inline
+#    define Print(...) printf(__VA_ARGS__)
 
-// To test one of these exclusively make sure to also set the appropriate compiler option: /arch:SSE2, /arch:SSE4.1, /arch:CORE-AVX2
-#define __USE_SSE2__
-#define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
-#define __USE_AVX2__
+// To test one of these exclusively make sure to also set the appropriate compiler option: /arch:SSE2, /arch:SSE4.1,
+// /arch:CORE-AVX2
+#    define __USE_SSE2__
+#    define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
+#    define __USE_AVX2__
 
 #elif defined(OS_LINUX)
 
@@ -226,66 +227,67 @@ Linux x86 or x64
 ================================
 */
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wunused-const-variable"
-#pragma clang diagnostic ignored "-Wself-assign"
-#endif
+#    ifdef __clang__
+#        pragma clang diagnostic ignored "-Wunused-const-variable"
+#        pragma clang diagnostic ignored "-Wself-assign"
+#    endif
 
-#if __STDC_VERSION__ >= 199901L
-#define _XOPEN_SOURCE 600
-#else
-#define _XOPEN_SOURCE 500
-#endif
+#    if __STDC_VERSION__ >= 199901L
+#        define _XOPEN_SOURCE 600
+#    else
+#        define _XOPEN_SOURCE 500
+#    endif
 
-#include <time.h>      // for timespec
-#include <stdio.h>     // for printf()
-#include <stdint.h>    // for uint32_t etc.
-#include <stdbool.h>   // for bool
-#include <assert.h>    // for assert()
-#include <math.h>      // for tanf()
-#include <string.h>    // for memset()
-#include <errno.h>     // for EBUSY, ETIMEDOUT etc.
-#include <ctype.h>     // for isspace() and isdigit()
-#include <sys/time.h>  // for gettimeofday()
-#if !defined(__USE_UNIX98)
-#define __USE_UNIX98 1  // for pthread_mutexattr_settype
-#endif
-#include <pthread.h>    // for pthread_create() etc.
-#include <x86intrin.h>  // for SSE intrinsics
+#    include <time.h>      // for timespec
+#    include <stdio.h>     // for printf()
+#    include <stdint.h>    // for uint32_t etc.
+#    include <stdbool.h>   // for bool
+#    include <assert.h>    // for assert()
+#    include <math.h>      // for tanf()
+#    include <string.h>    // for memset()
+#    include <errno.h>     // for EBUSY, ETIMEDOUT etc.
+#    include <ctype.h>     // for isspace() and isdigit()
+#    include <sys/time.h>  // for gettimeofday()
+#    if !defined(__USE_UNIX98)
+#        define __USE_UNIX98 1  // for pthread_mutexattr_settype
+#    endif
+#    include <pthread.h>    // for pthread_create() etc.
+#    include <x86intrin.h>  // for SSE intrinsics
 
-#if 0  // using the hardware prefetcher works well
-#define CACHE_LINE_SIZE 64
-#define PrefetchLinear(a, b)                                 \
-    for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
-        _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
-    }
-#define PrefetchBox(a, w, h, s)                                            \
-    for (int r = 0; r < (h); r++) {                                        \
-        for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
-            _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
-        }                                                                  \
-    }
-#define ZeroCacheLinear(a, b) \
-    do {                      \
-    } while ((a) && (b) && 0)
-#define ZeroCacheBox(a, w, h, s) \
-    do {                         \
-    } while ((a) && (w) && (h) && (s) && 0)
-#define FlushCacheLinear(a, b) \
-    do {                       \
-    } while ((a) && (b) && 0)
-#define FlushCacheBox(a, w, h, s) \
-    do {                          \
-    } while ((a) && (w) && (h) && (s) && 0)
-#endif
+#    if 0  // using the hardware prefetcher works well
+#        define CACHE_LINE_SIZE 64
+#        define PrefetchLinear(a, b)                                 \
+            for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
+                _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
+            }
+#        define PrefetchBox(a, w, h, s)                                            \
+            for (int r = 0; r < (h); r++) {                                        \
+                for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
+                    _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
+                }                                                                  \
+            }
+#        define ZeroCacheLinear(a, b) \
+            do {                      \
+            } while ((a) && (b) && 0)
+#        define ZeroCacheBox(a, w, h, s) \
+            do {                         \
+            } while ((a) && (w) && (h) && (s) && 0)
+#        define FlushCacheLinear(a, b) \
+            do {                       \
+            } while ((a) && (b) && 0)
+#        define FlushCacheBox(a, w, h, s) \
+            do {                          \
+            } while ((a) && (w) && (h) && (s) && 0)
+#    endif
 
-#define INLINE __inline
-#define Print(...) printf(__VA_ARGS__)
+#    define INLINE __inline
+#    define Print(...) printf(__VA_ARGS__)
 
-// To test one of these exclusively make sure to also set the appropriate compiler option: /arch:SSE2, /arch:SSE4.1, /arch:CORE-AVX2
-#define __USE_SSE2__
-#define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
-#define __USE_AVX2__
+// To test one of these exclusively make sure to also set the appropriate compiler option: /arch:SSE2, /arch:SSE4.1,
+// /arch:CORE-AVX2
+#    define __USE_SSE2__
+#    define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
+#    define __USE_AVX2__
 
 // These prototypes are only included when __USE_GNU is defined but that causes other compile errors.
 extern int pthread_setname_np(pthread_t __target_thread, __const char *__name);
@@ -299,58 +301,59 @@ Mac OS X
 ================================
 */
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wunused-const-variable"
-#pragma clang diagnostic ignored "-Wself-assign"
-#endif
+#    ifdef __clang__
+#        pragma clang diagnostic ignored "-Wunused-const-variable"
+#        pragma clang diagnostic ignored "-Wself-assign"
+#    endif
 
-#include <stdio.h>     // for printf()
-#include <stdint.h>    // for uint32_t etc.
-#include <stdbool.h>   // for bool
-#include <assert.h>    // for assert()
-#include <math.h>      // for tanf()
-#include <string.h>    // for memset()
-#include <errno.h>     // for EBUSY, ETIMEDOUT etc.
-#include <ctype.h>     // for isspace() and isdigit()
-#include <sys/time.h>  // for gettimeofday()
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#include <pthread.h>    // for pthread_create() etc.
-#include <x86intrin.h>  // for SSE intrinsics
+#    include <stdio.h>     // for printf()
+#    include <stdint.h>    // for uint32_t etc.
+#    include <stdbool.h>   // for bool
+#    include <assert.h>    // for assert()
+#    include <math.h>      // for tanf()
+#    include <string.h>    // for memset()
+#    include <errno.h>     // for EBUSY, ETIMEDOUT etc.
+#    include <ctype.h>     // for isspace() and isdigit()
+#    include <sys/time.h>  // for gettimeofday()
+#    include <sys/types.h>
+#    include <sys/sysctl.h>
+#    include <pthread.h>    // for pthread_create() etc.
+#    include <x86intrin.h>  // for SSE intrinsics
 
-#if 0  // using the hardware prefetcher works well
-#define CACHE_LINE_SIZE 64
-#define PrefetchLinear(a, b)                                 \
-    for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
-        _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
-    }
-#define PrefetchBox(a, w, h, s)                                            \
-    for (int r = 0; r < (h); r++) {                                        \
-        for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
-            _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
-        }                                                                  \
-    }
-#define ZeroCacheLinear(a, b) \
-    do {                      \
-    } while ((a) && (b) && 0)
-#define ZeroCacheBox(a, w, h, s) \
-    do {                         \
-    } while ((a) && (w) && (h) && (s) && 0)
-#define FlushCacheLinear(a, b) \
-    do {                       \
-    } while ((a) && (b) && 0)
-#define FlushCacheBox(a, w, h, s) \
-    do {                          \
-    } while ((a) && (w) && (h) && (s) && 0)
-#endif
+#    if 0  // using the hardware prefetcher works well
+#        define CACHE_LINE_SIZE 64
+#        define PrefetchLinear(a, b)                                 \
+            for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
+                _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
+            }
+#        define PrefetchBox(a, w, h, s)                                            \
+            for (int r = 0; r < (h); r++) {                                        \
+                for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
+                    _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
+                }                                                                  \
+            }
+#        define ZeroCacheLinear(a, b) \
+            do {                      \
+            } while ((a) && (b) && 0)
+#        define ZeroCacheBox(a, w, h, s) \
+            do {                         \
+            } while ((a) && (w) && (h) && (s) && 0)
+#        define FlushCacheLinear(a, b) \
+            do {                       \
+            } while ((a) && (b) && 0)
+#        define FlushCacheBox(a, w, h, s) \
+            do {                          \
+            } while ((a) && (w) && (h) && (s) && 0)
+#    endif
 
-#define INLINE __inline
-#define Print(...) printf(__VA_ARGS__)
+#    define INLINE __inline
+#    define Print(...) printf(__VA_ARGS__)
 
-// To test one of these exclusively make sure to also set the appropriate compiler option: /arch:SSE2, /arch:SSE4.1, /arch:CORE-AVX2
-#define __USE_SSE2__
-#define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
-#define __USE_AVX2__
+// To test one of these exclusively make sure to also set the appropriate compiler option: /arch:SSE2, /arch:SSE4.1,
+// /arch:CORE-AVX2
+#    define __USE_SSE2__
+#    define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
+#    define __USE_AVX2__
 
 #elif defined(OS_ANDROID)
 
@@ -360,50 +363,50 @@ Android ARM
 ================================
 */
 
-#include <stdio.h>        // for fopen()
-#include <stdlib.h>       // for atoi()
-#include <stdint.h>       // for uint32_t etc.
-#include <stdbool.h>      // for bool
-#include <assert.h>       // for assert()
-#include <math.h>         // for tanf()
-#include <pthread.h>      // for pthread_t
-#include <sched.h>        // for SCHED_FIFO
-#include <ctype.h>        // for isspace() and isdigit()
-#include <unistd.h>       // for gettid()
-#include <android/log.h>  // for __android_log_print()
-#include <arm_neon.h>     // for NEON
-#include <sys/prctl.h>    // for prctl()
-#include <sys/syscall.h>  // for syscall()
+#    include <stdio.h>        // for fopen()
+#    include <stdlib.h>       // for atoi()
+#    include <stdint.h>       // for uint32_t etc.
+#    include <stdbool.h>      // for bool
+#    include <assert.h>       // for assert()
+#    include <math.h>         // for tanf()
+#    include <pthread.h>      // for pthread_t
+#    include <sched.h>        // for SCHED_FIFO
+#    include <ctype.h>        // for isspace() and isdigit()
+#    include <unistd.h>       // for gettid()
+#    include <android/log.h>  // for __android_log_print()
+#    include <arm_neon.h>     // for NEON
+#    include <sys/prctl.h>    // for prctl()
+#    include <sys/syscall.h>  // for syscall()
 
-#if 1  // manual prefetching improves the performance
-#define CACHE_LINE_SIZE 64
-#define PrefetchLinear(a, b)                         \
-    for (int o = 0; o < (b); o += CACHE_LINE_SIZE) { \
-        __builtin_prefetch((const char *)(a) + (o)); \
-    }
-#define PrefetchBox(a, w, h, s)                                    \
-    for (int r = 0; r < (h); r++) {                                \
-        for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {           \
-            __builtin_prefetch((const char *)(a) + r * (s) + (o)); \
-        }                                                          \
-    }
-#define ZeroCacheLinear(a, b) \
-    do {                      \
-    } while ((a) && (b) && 0)
-#define ZeroCacheBox(a, w, h, s) \
-    do {                         \
-    } while ((a) && (w) && (h) && (s) && 0)
-#define FlushCacheLinear(a, b) \
-    do {                       \
-    } while ((a) && (b) && 0)
-#define FlushCacheBox(a, w, h, s) \
-    do {                          \
-    } while ((a) && (w) && (h) && (s) && 0)
-#endif
+#    if 1  // manual prefetching improves the performance
+#        define CACHE_LINE_SIZE 64
+#        define PrefetchLinear(a, b)                         \
+            for (int o = 0; o < (b); o += CACHE_LINE_SIZE) { \
+                __builtin_prefetch((const char *)(a) + (o)); \
+            }
+#        define PrefetchBox(a, w, h, s)                                    \
+            for (int r = 0; r < (h); r++) {                                \
+                for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {           \
+                    __builtin_prefetch((const char *)(a) + r * (s) + (o)); \
+                }                                                          \
+            }
+#        define ZeroCacheLinear(a, b) \
+            do {                      \
+            } while ((a) && (b) && 0)
+#        define ZeroCacheBox(a, w, h, s) \
+            do {                         \
+            } while ((a) && (w) && (h) && (s) && 0)
+#        define FlushCacheLinear(a, b) \
+            do {                       \
+            } while ((a) && (b) && 0)
+#        define FlushCacheBox(a, w, h, s) \
+            do {                          \
+            } while ((a) && (w) && (h) && (s) && 0)
+#    endif
 
-#define INLINE inline
-#define Print(...) printf(__VA_ARGS__)
-#define OUTPUT "/sdcard/atw/images/"
+#    define INLINE inline
+#    define Print(...) printf(__VA_ARGS__)
+#    define OUTPUT "/sdcard/atw/images/"
 
 //#undef __ARM_NEON__
 
@@ -415,46 +418,46 @@ Hexagon QDSP6
 ================================
 */
 
-#include <stdlib.h>   // for malloc/free
-#include <stdint.h>   // for uint32_t etc.
-#include <stdbool.h>  // for bool
-#include <math.h>     // for tanf()
-#include "AEEStdErr.h"
-#include "HAP_mem.h"
-#include "HAP_debug.h"
-#include "HAP_perf.h"
-#include "HAP_power.h"
-#include "HAP_farf.h"
-#include "hexagon_types.h"
-#include "hexagon_protos.h"
-#include "qurt.h"
-#include "qurt_atomic_ops.h"
-#include "TimeWarp.h"  // ksMeshCoord
+#    include <stdlib.h>   // for malloc/free
+#    include <stdint.h>   // for uint32_t etc.
+#    include <stdbool.h>  // for bool
+#    include <math.h>     // for tanf()
+#    include "AEEStdErr.h"
+#    include "HAP_mem.h"
+#    include "HAP_debug.h"
+#    include "HAP_perf.h"
+#    include "HAP_power.h"
+#    include "HAP_farf.h"
+#    include "hexagon_types.h"
+#    include "hexagon_protos.h"
+#    include "qurt.h"
+#    include "qurt_atomic_ops.h"
+#    include "TimeWarp.h"  // ksMeshCoord
 
-#if 1  // manual prefetching significantly improves the performance
-#define CACHE_LINE_SIZE 32
-#define PrefetchLinear(a, b) dspcache_l2fetch_linear((a), (b))
-#define PrefetchBox(a, w, h, s) dspcache_l2fetch_box((a), (w), (h), (s))
-#define ZeroCacheLinear(a, b) dspcache_dczeroa_linear((a), (b))
-#define ZeroCacheBox(a, w, h, s) dspcache_dczeroa_box((a), (w), (h), (s))
-#define FlushCacheLinear(a, b) dspcache_flush_invalidate_linear((a), (b))
-#define FlushCacheBox(a, w, h, s) dspcache_flush_invalidate_box((a), (w), (h), (s))
-#endif
+#    if 1  // manual prefetching significantly improves the performance
+#        define CACHE_LINE_SIZE 32
+#        define PrefetchLinear(a, b) dspcache_l2fetch_linear((a), (b))
+#        define PrefetchBox(a, w, h, s) dspcache_l2fetch_box((a), (w), (h), (s))
+#        define ZeroCacheLinear(a, b) dspcache_dczeroa_linear((a), (b))
+#        define ZeroCacheBox(a, w, h, s) dspcache_dczeroa_box((a), (w), (h), (s))
+#        define FlushCacheLinear(a, b) dspcache_flush_invalidate_linear((a), (b))
+#        define FlushCacheBox(a, w, h, s) dspcache_flush_invalidate_box((a), (w), (h), (s))
+#    endif
 
-#define INLINE inline
-#define FARF_DEBUG_MSG 1
-#define FARF_DEBUG_MSG_LEVEL HAP_LEVEL_HIGH
-#define Print(...) FARF(ALWAYS, __VA_ARGS__)
+#    define INLINE inline
+#    define FARF_DEBUG_MSG 1
+#    define FARF_DEBUG_MSG_LEVEL HAP_LEVEL_HIGH
+#    define Print(...) FARF(ALWAYS, __VA_ARGS__)
 
-#if !defined(__HEXAGON_V50__) && (__HEXAGON_ARCH__ >= 50)
-#define __HEXAGON_V50__ 1  // Snapdragon 805 (8x84)
-#endif
-#if !defined(__HEXAGON_V56__) && (__HEXAGON_ARCH__ >= 56)
-#define __HEXAGON_V56__ 1  // Snapdragon 810 (8x94)
-#endif
-#if !defined(__HEXAGON_V60__) && (__HEXAGON_ARCH__ >= 60)
-#define __HEXAGON_V60__ 1  // Snapdragon 820 (8x96)
-#endif
+#    if !defined(__HEXAGON_V50__) && (__HEXAGON_ARCH__ >= 50)
+#        define __HEXAGON_V50__ 1  // Snapdragon 805 (8x84)
+#    endif
+#    if !defined(__HEXAGON_V56__) && (__HEXAGON_ARCH__ >= 56)
+#        define __HEXAGON_V56__ 1  // Snapdragon 810 (8x94)
+#    endif
+#    if !defined(__HEXAGON_V60__) && (__HEXAGON_ARCH__ >= 60)
+#        define __HEXAGON_V60__ 1  // Snapdragon 820 (8x96)
+#    endif
 
 typedef unsigned char Byte;
 typedef unsigned int Word32;
@@ -464,12 +467,12 @@ static inline Word32 Q6_R_extract_Pl(Word64 Rss) { return (Word32)(Rss); }
 static inline Word32 Q6_R_extract_Ph(Word64 Rss) { return (Word32)(Rss >> 32); }
 
 static inline Word64 Q6_P_memb_fifo_PR(Word64 Rss, const Byte *Rt) {
-#if 1
+#    if 1
     return (Rss >> 8) | ((Word64)(Rt[0]) << 56);
-#else
+#    else
     __asm__ __volatile__("	%0 = memb_fifo(%1)\n" : : "r"(Rss), "r"(Rt) :);
     return Rss;
-#endif
+#    endif
 }
 
 // Fetch all cache lines touched by the linear address range.
@@ -670,44 +673,44 @@ Generic x86 or x64
 ================================
 */
 
-#include <stdio.h>    // for printf()
-#include <stdint.h>   // for uint32_t etc.
-#include <stdbool.h>  // for bool
-#include <math.h>     // for tanf()
-#include <intrin.h>   // for SSE intrinsics
+#    include <stdio.h>    // for printf()
+#    include <stdint.h>   // for uint32_t etc.
+#    include <stdbool.h>  // for bool
+#    include <math.h>     // for tanf()
+#    include <intrin.h>   // for SSE intrinsics
 
-#if 0  // using the hardware prefetcher works well
-#define CACHE_LINE_SIZE 64
-#define PrefetchLinear(a, b)                                 \
-    for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
-        _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
-    }
-#define PrefetchBox(a, w, h, s)                                            \
-    for (int r = 0; r < (h); r++) {                                        \
-        for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
-            _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
-        }                                                                  \
-    }
-#define ZeroCacheLinear(a, b) \
-    do {                      \
-    } while ((a) && (b) && 0)
-#define ZeroCacheBox(a, w, h, s) \
-    do {                         \
-    } while ((a) && (w) && (h) && (s) && 0)
-#define FlushCacheLinear(a, b) \
-    do {                       \
-    } while ((a) && (b) && 0)
-#define FlushCacheBox(a, w, h, s) \
-    do {                          \
-    } while ((a) && (w) && (h) && (s) && 0)
-#endif
+#    if 0  // using the hardware prefetcher works well
+#        define CACHE_LINE_SIZE 64
+#        define PrefetchLinear(a, b)                                 \
+            for (int o = 0; o < (b); o += CACHE_LINE_SIZE) {         \
+                _mm_prefetch((const char *)(a) + (o), _MM_HINT_NTA); \
+            }
+#        define PrefetchBox(a, w, h, s)                                            \
+            for (int r = 0; r < (h); r++) {                                        \
+                for (int o = 0; o < (w); o += CACHE_LINE_SIZE) {                   \
+                    _mm_prefetch((const char *)(a) + r * (s) + (o), _MM_HINT_NTA); \
+                }                                                                  \
+            }
+#        define ZeroCacheLinear(a, b) \
+            do {                      \
+            } while ((a) && (b) && 0)
+#        define ZeroCacheBox(a, w, h, s) \
+            do {                         \
+            } while ((a) && (w) && (h) && (s) && 0)
+#        define FlushCacheLinear(a, b) \
+            do {                       \
+            } while ((a) && (b) && 0)
+#        define FlushCacheBox(a, w, h, s) \
+            do {                          \
+            } while ((a) && (w) && (h) && (s) && 0)
+#    endif
 
-#define INLINE inline
-#define Print(...) printf(__VA_ARGS__)
+#    define INLINE inline
+#    define Print(...) printf(__VA_ARGS__)
 
-#define __USE_SSE2__
-#define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
-#define __USE_AVX2__
+#    define __USE_SSE2__
+#    define __USE_SSE4__  // SSE4 is only needed for _mm_extract_epi32() and _mm_insert_epi32(), otherwise SSSE3 would suffice
+#    define __USE_AVX2__
 
 #endif
 
@@ -718,29 +721,29 @@ Default to no cache management
 */
 
 #if !defined(CACHE_LINE_SIZE)
-#define CACHE_LINE_SIZE 64
-#define PrefetchLinear(a, b) \
-    do {                     \
-    } while ((a) && (b) && 0)
-#define PrefetchBox(a, w, h, s) \
-    do {                        \
-    } while ((a) && (w) && (h) && (s) && 0)
-#define ZeroCacheLinear(a, b) \
-    do {                      \
-    } while ((a) && (b) && 0)
-#define ZeroCacheBox(a, w, h, s) \
-    do {                         \
-    } while ((a) && (w) && (h) && (s) && 0)
-#define FlushCacheLinear(a, b) \
-    do {                       \
-    } while ((a) && (b) && 0)
-#define FlushCacheBox(a, w, h, s) \
-    do {                          \
-    } while ((a) && (w) && (h) && (s) && 0)
+#    define CACHE_LINE_SIZE 64
+#    define PrefetchLinear(a, b) \
+        do {                     \
+        } while ((a) && (b) && 0)
+#    define PrefetchBox(a, w, h, s) \
+        do {                        \
+        } while ((a) && (w) && (h) && (s) && 0)
+#    define ZeroCacheLinear(a, b) \
+        do {                      \
+        } while ((a) && (b) && 0)
+#    define ZeroCacheBox(a, w, h, s) \
+        do {                         \
+        } while ((a) && (w) && (h) && (s) && 0)
+#    define FlushCacheLinear(a, b) \
+        do {                       \
+        } while ((a) && (b) && 0)
+#    define FlushCacheBox(a, w, h, s) \
+        do {                          \
+        } while ((a) && (w) && (h) && (s) && 0)
 #endif
 
 #if !defined(OUTPUT)
-#define OUTPUT ""
+#    define OUTPUT ""
 #endif
 
 #define UNUSED_PARM(x) \
@@ -779,7 +782,7 @@ static int ClampInt(const int x, const int min, const int max) {
 
 #if defined(USE_DSP_TIMEWARP)
 
-#include "TimeWarp.h"
+#    include "TimeWarp.h"
 
 #else  // !USE_DSP_TIMEWARP
 
@@ -789,14 +792,14 @@ ksMeshCoord
 ================================
 */
 
-#if !defined(OS_HEXAGON)  // If not already defined in TimeWarp.h
+#    if !defined(OS_HEXAGON)  // If not already defined in TimeWarp.h
 
 typedef struct {
     float x;
     float y;
 } ksMeshCoord;
 
-#endif
+#    endif
 
 /*
 ================================
@@ -804,17 +807,18 @@ SSE and AVX vector constants
 ================================
 */
 
-#define _S16(a) ((a) >> 0) & 0xFF, ((a) >> 8) & 0xFF
-#define _S32(a) ((a) >> 0) & 0xFF, ((a) >> 8) & 0xFF, ((a) >> 16) & 0xFF, ((a) >> 24) & 0xFF
+#    define _S16(a) ((a) >> 0) & 0xFF, ((a) >> 8) & 0xFF
+#    define _S32(a) ((a) >> 0) & 0xFF, ((a) >> 8) & 0xFF, ((a) >> 16) & 0xFF, ((a) >> 24) & 0xFF
 
-#define _C(x, s) ((long long)x << s)
-#define _C8(a, b, c, d, e, f, g, h) (_C(a, 0) | _C(b, 8) | _C(c, 16) | _C(d, 24) | _C(e, 32) | _C(f, 40) | _C(g, 48) | _C(h, 56))
-#define _C16(a, b, c, d) (_C(a, 0) | _C(b, 16) | _C(c, 32) | _C(d, 48))
-#define _C32(a, b) (_C(a, 0) | _C(b, 32))
+#    define _C(x, s) ((long long)x << s)
+#    define _C8(a, b, c, d, e, f, g, h) \
+        (_C(a, 0) | _C(b, 8) | _C(c, 16) | _C(d, 24) | _C(e, 32) | _C(f, 40) | _C(g, 48) | _C(h, 56))
+#    define _C16(a, b, c, d) (_C(a, 0) | _C(b, 16) | _C(c, 32) | _C(d, 48))
+#    define _C32(a, b) (_C(a, 0) | _C(b, 32))
 
-#if defined(__USE_SSE2__) || defined(__USE_SSE4__)
+#    if defined(__USE_SSE2__) || defined(__USE_SSE4__)
 
-#if defined(_MSC_VER)
+#        if defined(_MSC_VER)
 // MSVC: static initialization of __m128i as 16x 8-bit integers
 // typedef union __declspec(intrin_type) __declspec(align(16)) __m128i
 // {
@@ -827,34 +831,34 @@ SSE and AVX vector constants
 //     unsigned __int32 m128i_u32[4];
 //     unsigned __int64 m128i_u64[2];
 // } __m128i;
-#define _MM_SET1_EPI8(x) \
-    { x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x }
-#define _MM_SET_EPI8(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a) \
-    { a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p }
-#define _MM_SET1_EPI16(x) \
-    { _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x) }
-#define _MM_SET_EPI16(h, g, f, e, d, c, b, a) \
-    { _S16(a), _S16(b), _S16(c), _S16(d), _S16(e), _S16(f), _S16(g), _S16(h) }
-#define _MM_SET1_EPI32(x) \
-    { _S32(x), _S32(x), _S32(x), _S32(x) }
-#define _MM_SET_EPI32(d, c, b, a) \
-    { _S32(a), _S32(b), _S32(c), _S32(d) }
-#else  // _MSC_VER
+#            define _MM_SET1_EPI8(x) \
+                { x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x }
+#            define _MM_SET_EPI8(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a) \
+                { a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p }
+#            define _MM_SET1_EPI16(x) \
+                { _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x) }
+#            define _MM_SET_EPI16(h, g, f, e, d, c, b, a) \
+                { _S16(a), _S16(b), _S16(c), _S16(d), _S16(e), _S16(f), _S16(g), _S16(h) }
+#            define _MM_SET1_EPI32(x) \
+                { _S32(x), _S32(x), _S32(x), _S32(x) }
+#            define _MM_SET_EPI32(d, c, b, a) \
+                { _S32(a), _S32(b), _S32(c), _S32(d) }
+#        else  // _MSC_VER
 // GCC/Clang/LLVM: static initialization of __m128i as 2x 64-bit integers
 // typedef long long __m128i __attribute__ ((__vector_size__ (16), __may_alias__));
-#define _MM_SET1_EPI8(x) \
-    { _C8(x, x, x, x, x, x, x, x), _C8(x, x, x, x, x, x, x, x) }
-#define _MM_SET_EPI8(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a) \
-    { _C8(a, b, c, d, e, f, g, h), _C8(i, j, k, l, m, n, o, p) }
-#define _MM_SET1_EPI16(x) \
-    { _C16(x, x, x, x), _C16(x, x, x, x) }
-#define _MM_SET_EPI16(h, g, f, e, d, c, b, a) \
-    { _C16(a, b, c, d), _C16(e, f, g, h) }
-#define _MM_SET1_EPI32(x) \
-    { _C32(x, x), _C32(x, x) }
-#define _MM_SET_EPI32(d, c, b, a) \
-    { _C32(a, b), _C32(c, d) }
-#endif  // _MSC_VER
+#            define _MM_SET1_EPI8(x) \
+                { _C8(x, x, x, x, x, x, x, x), _C8(x, x, x, x, x, x, x, x) }
+#            define _MM_SET_EPI8(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a) \
+                { _C8(a, b, c, d, e, f, g, h), _C8(i, j, k, l, m, n, o, p) }
+#            define _MM_SET1_EPI16(x) \
+                { _C16(x, x, x, x), _C16(x, x, x, x) }
+#            define _MM_SET_EPI16(h, g, f, e, d, c, b, a) \
+                { _C16(a, b, c, d), _C16(e, f, g, h) }
+#            define _MM_SET1_EPI32(x) \
+                { _C32(x, x), _C32(x, x) }
+#            define _MM_SET_EPI32(d, c, b, a) \
+                { _C32(a, b), _C32(c, d) }
+#        endif  // _MSC_VER
 
 static const __m128i vector_uint8_0 = _MM_SET1_EPI8(0);
 static const __m128i vector_uint8_127 = _MM_SET1_EPI8(127);
@@ -872,14 +876,15 @@ static const __m128i vector_int32_1 = _MM_SET1_EPI32(1);
 static const __m128i vector_int32_127 = _MM_SET1_EPI32(127);
 static const __m128i vector_int32_255 = _MM_SET1_EPI32(255);
 
-#define _mm_loadh_epi64(x, address) _mm_castps_si128(_mm_loadh_pi(_mm_castsi128_ps(x), (__m64 *)(address)))
-#define _mm_pack_epi32(a, b) _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(a, 16), 16), _mm_srai_epi32(_mm_slli_epi32(b, 16), 16))
+#        define _mm_loadh_epi64(x, address) _mm_castps_si128(_mm_loadh_pi(_mm_castsi128_ps(x), (__m64 *)(address)))
+#        define _mm_pack_epi32(a, b) \
+            _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(a, 16), 16), _mm_srai_epi32(_mm_slli_epi32(b, 16), 16))
 
-#endif  // __USE_SSE2__ || __USE_SSE4__
+#    endif  // __USE_SSE2__ || __USE_SSE4__
 
-#if defined(__USE_AVX2__)
+#    if defined(__USE_AVX2__)
 
-#if defined(_MSC_VER)
+#        if defined(_MSC_VER)
 // MSVC: static initialization of __m256i as 32x 8-bit integers
 // typedef union  __declspec(intrin_type) __declspec(align(32)) __m256i
 // {
@@ -892,48 +897,51 @@ static const __m128i vector_int32_255 = _MM_SET1_EPI32(255);
 //     unsigned __int32 m256i_u32[8];
 //     unsigned __int64 m256i_u64[4];
 // } __m256i;
-#define _MM256_SET1_EPI8(x) \
-    { x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x }
-#define _MM256_SET_EPI8(p1, o1, n1, m1, l1, k1, j1, i1, h1, g1, f1, e1, d1, c1, b1, a1, p0, o0, n0, m0, l0, k0, j0, i0, h0, g0, \
-                        f0, e0, d0, c0, b0, a0)                                                                                 \
-    {                                                                                                                           \
-        a0, b0, c0, d0, e0, f0, g0, h0, i0, j0, k0, l0, m0, n0, o0, p0, a1, b1, c1, d1, e1, f1, g1, h1, i1, j1, k1, l1, m1, n1, \
-            o1, p1                                                                                                              \
-    }
-#define _MM256_SET1_EPI16(x)                                                                                                 \
-    {                                                                                                                        \
-        _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), \
-            _S16(x), _S16(x), _S16(x)                                                                                        \
-    }
-#define _MM256_SET_EPI16(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a)                                                     \
-    {                                                                                                                        \
-        _S16(a), _S16(b), _S16(c), _S16(d), _S16(e), _S16(f), _S16(g), _S16(h), _S16(i), _S16(j), _S16(k), _S16(l), _S16(m), \
-            _S16(n), _S16(o), _S16(p)                                                                                        \
-    }
-#define _MM256_SET1_EPI32(x) \
-    { _S32(x), _S32(x), _S32(x), _S32(x), _S32(x), _S32(x), _S32(x), _S32(x) }
-#define _MM256_SET_EPI32(h, g, f, e, d, c, b, a) \
-    { _S32(a), _S32(b), _S32(c), _S32(d), _S32(c), _S32(d), _S32(e), _S32(f) }
-#else  // _MSC_VER
+#            define _MM256_SET1_EPI8(x) \
+                { x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x }
+#            define _MM256_SET_EPI8(p1, o1, n1, m1, l1, k1, j1, i1, h1, g1, f1, e1, d1, c1, b1, a1, p0, o0, n0, m0, l0, k0, j0, \
+                                    i0, h0, g0, f0, e0, d0, c0, b0, a0)                                                         \
+                {                                                                                                               \
+                    a0, b0, c0, d0, e0, f0, g0, h0, i0, j0, k0, l0, m0, n0, o0, p0, a1, b1, c1, d1, e1, f1, g1, h1, i1, j1, k1, \
+                        l1, m1, n1, o1, p1                                                                                      \
+                }
+#            define _MM256_SET1_EPI16(x)                                                                                        \
+                {                                                                                                               \
+                    _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), _S16(x), \
+                        _S16(x), _S16(x), _S16(x), _S16(x)                                                                      \
+                }
+#            define _MM256_SET_EPI16(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a)                                            \
+                {                                                                                                               \
+                    _S16(a), _S16(b), _S16(c), _S16(d), _S16(e), _S16(f), _S16(g), _S16(h), _S16(i), _S16(j), _S16(k), _S16(l), \
+                        _S16(m), _S16(n), _S16(o), _S16(p)                                                                      \
+                }
+#            define _MM256_SET1_EPI32(x) \
+                { _S32(x), _S32(x), _S32(x), _S32(x), _S32(x), _S32(x), _S32(x), _S32(x) }
+#            define _MM256_SET_EPI32(h, g, f, e, d, c, b, a) \
+                { _S32(a), _S32(b), _S32(c), _S32(d), _S32(c), _S32(d), _S32(e), _S32(f) }
+#        else  // _MSC_VER
 // GCC/Clang/LLVM: static initialization of __m256i as 4x 64-bit integers
 // typedef long long __m256i __attribute__ ((__vector_size__ (32), __may_alias__));
-#define _MM256_SET1_EPI8(x) \
-    { _C8(x, x, x, x, x, x, x, x), _C8(x, x, x, x, x, x, x, x), _C8(x, x, x, x, x, x, x, x), _C8(x, x, x, x, x, x, x, x) }
-#define _MM256_SET_EPI8(p1, o1, n1, m1, l1, k1, j1, i1, h1, g1, f1, e1, d1, c1, b1, a1, p0, o0, n0, m0, l0, k0, j0, i0, h0, g0, \
-                        f0, e0, d0, c0, b0, a0)                                                                                 \
-    {                                                                                                                           \
-        _C8(a0, b0, c0, d0, e0, f0, g0, h0), _C8(i0, j0, k0, l0, m0, n0, o0, p0), _C8(a1, b1, c1, d1, e1, f1, g1, h1),          \
-            _C8(i1, j1, k1, l1, m1, n1, o1, p1)                                                                                 \
-    }
-#define _MM256_SET1_EPI16(x) \
-    { _C16(x, x, x, x), _C16(x, x, x, x), _C16(x, x, x, x), _C16(x, x, x, x) }
-#define _MM256_SET_EPI16(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a) \
-    { _C16(a, b, c, d), _C16(e, f, g, h), _C16(i, j, k, l), _C16(m, n, o, p) }
-#define _MM256_SET1_EPI32(x) \
-    { _C32(x, x), _C32(x, x), _C32(x, x), _C32(x, x) }
-#define _MM256_SET_EPI32(h, g, f, e, d, c, b, a) \
-    { _C32(a, b), _C32(c, d), _C32(e, f), _C32(g, h) }
-#endif  // _MSC_VER
+#            define _MM256_SET1_EPI8(x)                                                                    \
+                {                                                                                          \
+                    _C8(x, x, x, x, x, x, x, x), _C8(x, x, x, x, x, x, x, x), _C8(x, x, x, x, x, x, x, x), \
+                        _C8(x, x, x, x, x, x, x, x)                                                        \
+                }
+#            define _MM256_SET_EPI8(p1, o1, n1, m1, l1, k1, j1, i1, h1, g1, f1, e1, d1, c1, b1, a1, p0, o0, n0, m0, l0, k0, j0,    \
+                                    i0, h0, g0, f0, e0, d0, c0, b0, a0)                                                            \
+                {                                                                                                                  \
+                    _C8(a0, b0, c0, d0, e0, f0, g0, h0), _C8(i0, j0, k0, l0, m0, n0, o0, p0), _C8(a1, b1, c1, d1, e1, f1, g1, h1), \
+                        _C8(i1, j1, k1, l1, m1, n1, o1, p1)                                                                        \
+                }
+#            define _MM256_SET1_EPI16(x) \
+                { _C16(x, x, x, x), _C16(x, x, x, x), _C16(x, x, x, x), _C16(x, x, x, x) }
+#            define _MM256_SET_EPI16(p, o, n, m, l, k, j, i, h, g, f, e, d, c, b, a) \
+                { _C16(a, b, c, d), _C16(e, f, g, h), _C16(i, j, k, l), _C16(m, n, o, p) }
+#            define _MM256_SET1_EPI32(x) \
+                { _C32(x, x), _C32(x, x), _C32(x, x), _C32(x, x) }
+#            define _MM256_SET_EPI32(h, g, f, e, d, c, b, a) \
+                { _C32(a, b), _C32(c, d), _C32(e, f), _C32(g, h) }
+#        endif  // _MSC_VER
 
 static const __m256i vector256_uint8_unpack_hilo =
     _MM256_SET_EPI8(15, 11, 14, 10, 13, 9, 12, 8, 7, 3, 6, 2, 5, 1, 4, 0, 15, 11, 14, 10, 13, 9, 12, 8, 7, 3, 6, 2, 5, 1, 4, 0);
@@ -950,10 +958,10 @@ static const __m256i vector256_int32_1 = _MM256_SET1_EPI32(1);
 static const __m256i vector256_int32_01010101 = _MM256_SET_EPI32(1, 0, 1, 0, 1, 0, 1, 0);
 static const __m256i vector256_int32_127 = _MM256_SET1_EPI32(127);
 
-#define _mm256_pack_epi32(a, b) \
-    _mm256_packs_epi32(_mm256_srai_epi32(_mm256_slli_epi32(a, 16), 16), _mm256_srai_epi32(_mm256_slli_epi32(b, 16), 16))
+#        define _mm256_pack_epi32(a, b) \
+            _mm256_packs_epi32(_mm256_srai_epi32(_mm256_slli_epi32(a, 16), 16), _mm256_srai_epi32(_mm256_slli_epi32(b, 16), 16))
 
-#endif  // __USE_AVX2__
+#    endif  // __USE_AVX2__
 
 /*
 ================================================================================================
@@ -963,7 +971,7 @@ static const __m256i vector256_int32_127 = _MM256_SET1_EPI32(127);
 
 // Typically close to 20% of all tiles will be completely black.
 static void Clear32x32(unsigned char *const dest, const int destPitchInPixels) {
-#if defined(__USE_AVX2__)
+#    if defined(__USE_AVX2__)
     // Use AVX2 to clear the memory.
     const __m256i zero = _mm256_setzero_si256();
     unsigned char *destRow = dest;
@@ -974,7 +982,7 @@ static void Clear32x32(unsigned char *const dest, const int destPitchInPixels) {
         _mm256_stream_si256((__m256i *)(destRow + 3 * 32), zero);
         destRow += destPitchInPixels * 4;
     }
-#elif defined(__USE_SSE2__)
+#    elif defined(__USE_SSE2__)
     // Use SSE2 to clear the memory.
     const __m128i zero = _mm_setzero_si128();
     unsigned char *destRow = dest;
@@ -989,7 +997,7 @@ static void Clear32x32(unsigned char *const dest, const int destPitchInPixels) {
         _mm_stream_si128((__m128i *)(destRow + 7 * 16), zero);
         destRow += destPitchInPixels * 4;
     }
-#elif defined(__ARM_NEON__)
+#    elif defined(__ARM_NEON__)
     // AArch64 supports ZVA (Zero-Virtual-Address) but for AArch32 memory is cleared using NEON.
     __asm__ volatile(
         "	mov			r0, #32					\n\t"
@@ -1011,9 +1019,9 @@ static void Clear32x32(unsigned char *const dest, const int destPitchInPixels) {
         "	subs		r0, r0, #1				\n\t"
         "	bne			1b						\n\t"
         :
-        : [d] "r"(dest), [p] "r"(destPitchInPixels)
+        : [ d ] "r"(dest), [ p ] "r"(destPitchInPixels)
         : "r0", "r1", "r2", "r3", "r4", "d0", "d1", "memory");
-#elif defined(__HEXAGON_V50__)
+#    elif defined(__HEXAGON_V50__)
     // Zero each cache line with DCZEROA and then flush the cache line with DCCLEANINVA.
     Word32 width = 32 * 4;
     Word32 height = 32;
@@ -1057,7 +1065,7 @@ static void Clear32x32(unsigned char *const dest, const int destPitchInPixels) {
         :
         : "r"(dest), "r"(width), "r"(height), "r"(stride)
         : "p0", "r5", "r6", "memory");
-#else
+#    else
     unsigned char *destRow = dest;
     for (int y = 0; y < 32; y++) {
         for (int x = 0; x < 32 * 4; x += 8) {
@@ -1065,7 +1073,7 @@ static void Clear32x32(unsigned char *const dest, const int destPitchInPixels) {
         }
         destRow += destPitchInPixels * 4;
     }
-#endif
+#    endif
 }
 
 static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, const int srcPitchInTexels, const int srcTexelsWide,
@@ -1154,7 +1162,7 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
 
         unsigned int *destRow = (unsigned int *)dest + y * destPitchInPixels;
 
-#if defined(__USE_AVX2__)
+#    if defined(__USE_AVX2__)
 
         __m256i sx = _mm256_broadcastw_epi16(_mm_cvtsi32_si128(localSrcX8));
         __m256i sy = _mm256_broadcastw_epi16(_mm_cvtsi32_si128(localSrcY8));
@@ -1173,10 +1181,10 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
             __m256i of0 = _mm256_madd_epi16(_mm256_unpacklo_epi16(ay, ax), pitch);
             __m256i of1 = _mm256_madd_epi16(_mm256_unpackhi_epi16(ay, ax), pitch);
 
-#if 1
+#        if 1
             __m256i d0 = _mm256_i32gather_epi32((const int *)localSrc, of0, 4);
             __m256i d1 = _mm256_i32gather_epi32((const int *)localSrc, of1, 4);
-#else
+#        else
             __m128i o0 = _mm256_extracti128_si256(of0, 0);
             __m128i o1 = _mm256_extracti128_si256(of0, 1);
             __m128i o2 = _mm256_extracti128_si256(of1, 0);
@@ -1218,7 +1226,7 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
 
             d0 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), d0, 0), d1, 1);
             d1 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), d2, 0), d3, 1);
-#endif
+#        endif
 
             _mm256_stream_si256((__m256i *)(destRow + x + 0), d0);
             _mm256_stream_si256((__m256i *)(destRow + x + 8), d1);
@@ -1227,7 +1235,7 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
             sy = _mm256_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE4__)
+#    elif defined(__USE_SSE4__)
 
         __m128i sx = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcX8), 0), 0);
         __m128i sy = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcY8), 0), 0);
@@ -1271,7 +1279,7 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
             sy = _mm_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE2__)
+#    elif defined(__USE_SSE2__)
 
         __m128i sx = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcX8), 0), 0);
         __m128i sy = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcY8), 0), 0);
@@ -1312,7 +1320,7 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
             sy = _mm_add_epi16(sy, dy);
         }
 
-#elif defined(__ARM_NEON__)  // increased throughput
+#    elif defined(__ARM_NEON__)  // increased throughput
 
         __asm__ volatile(
             "	mov			r2, #4									\n\t"  // pixel
@@ -1438,11 +1446,11 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
                                                                                                                        // * destPitchInPixels + 32 )
             "	bne			.LP_NEAREST_PACKED_RGB_1%=				\n\t"
             :
-            : [sx] "r"(localSrcX8), [sy] "r"(localSrcY8), [dx] "r"(deltaX8), [dy] "r"(deltaY8), [s] "r"(localSrc), [d] "r"(destRow),
-              [p] "r"(srcPitchInTexels)
+            : [ sx ] "r"(localSrcX8), [ sy ] "r"(localSrcY8), [ dx ] "r"(deltaX8), [ dy ] "r"(deltaY8), [ s ] "r"(localSrc),
+              [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "r2", "r3", "r4", "q0", "q1", "memory");
 
-#elif defined(__ARM_NEON__)  // compressed computation
+#    elif defined(__ARM_NEON__)  // compressed computation
 
         __asm__ volatile(
             "	uxth		%[sx], %[sx]					\n\t"
@@ -1462,11 +1470,11 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
             "	subs		r2, r2, #1						\n\t"
             "	bne			.LP_NEAREST_PACKED_RGB_2%=		\n\t"
             :
-            : [sx] "r"(localSrcX8), [sy] "r"(localSrcY8), [dx] "r"(deltaX8), [dy] "r"(deltaY8), [s] "r"(localSrc), [d] "r"(destRow),
-              [p] "r"(srcPitchInTexels)
+            : [ sx ] "r"(localSrcX8), [ sy ] "r"(localSrcY8), [ dx ] "r"(deltaX8), [ dy ] "r"(deltaY8), [ s ] "r"(localSrc),
+              [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "r2", "r3", "r4", "memory");
 
-#elif defined(__HEXAGON_V50__)  // 8 pixels per iteration appears to be optimal
+#    elif defined(__HEXAGON_V50__)  // 8 pixels per iteration appears to be optimal
 
         Word32 dxy1 = Q6_R_combine_RlRl(deltaY8, deltaX8);
         Word64 dxy2 = Q6_P_vaslh_PI(Q6_P_combine_RR(dxy1, dxy1), 1);
@@ -1498,7 +1506,7 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
             sxy67 = Q6_P_vaddh_PP(sxy67, dxy8);
         }
 
-#else
+#    else
 
         for (int x = 0; x < 32; x++) {
             const int sampleX = localSrcX8 >> STP;
@@ -1510,7 +1518,7 @@ static void Warp32x32_SampleNearestPackedRGB(const unsigned char *const src, con
             localSrcY8 += deltaY8;
         }
 
-#endif
+#    endif
 
         scanLeftSrcX += scanLeftDeltaX;
         scanLeftSrcY += scanLeftDeltaY;
@@ -1529,11 +1537,11 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
 
     const int L32 = 5;   // log2( 32 )
     const int SCP = 16;  // scan-conversion precision
-#if defined(__USE_SSE4__) || defined(__USE_AVX2__)
+#    if defined(__USE_SSE4__) || defined(__USE_AVX2__)
     const int STP = 7;   // sub-texel precision
-#else
+#    else
     const int STP = 8;  // sub-texel precision
-#endif
+#    endif
 
     // ZeroCacheBox( dest, 32 * 4, 32, destPitchInPixels * 4 );
 
@@ -1611,7 +1619,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
 
         unsigned int *destRow = (unsigned int *)dest + y * destPitchInPixels;
 
-#if defined(__USE_AVX2__)
+#    if defined(__USE_AVX2__)
 
         // This version uses VPMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -1635,7 +1643,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             __m256i of0 = _mm256_madd_epi16(_mm256_unpacklo_epi16(ay, ax), pitch);
             __m256i of1 = _mm256_madd_epi16(_mm256_unpackhi_epi16(ay, ax), pitch);
 
-#if 1
+#        if 1
             __m256i o0 = _mm256_add_epi32(_mm256_unpacklo_epi32(of0, of0), vector256_int32_01010101);
             __m256i o1 = _mm256_add_epi32(_mm256_unpackhi_epi32(of0, of0), vector256_int32_01010101);
             __m256i o2 = _mm256_add_epi32(_mm256_unpacklo_epi32(of1, of1), vector256_int32_01010101);
@@ -1645,7 +1653,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             __m256i r1 = _mm256_i32gather_epi32((const int *)localSrc, o1, 4);
             __m256i r2 = _mm256_i32gather_epi32((const int *)localSrc, o2, 4);
             __m256i r3 = _mm256_i32gather_epi32((const int *)localSrc, o3, 4);
-#else
+#        else
             __m128i o0 = _mm256_extracti128_si256(of0, 0);
             __m128i o1 = _mm256_extracti128_si256(of0, 1);
             __m128i o2 = _mm256_extracti128_si256(of1, 0);
@@ -1681,7 +1689,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             __m256i r1 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), t1, 0), t3, 1);
             __m256i r2 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), t4, 0), t6, 1);
             __m256i r3 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), t5, 0), t7, 1);
-#endif
+#        endif
 
             r0 = _mm256_shuffle_epi8(r0, vector256_uint8_unpack_hilo);
             r1 = _mm256_shuffle_epi8(r1, vector256_uint8_unpack_hilo);
@@ -1709,7 +1717,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             sy = _mm256_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE4__)
+#    elif defined(__USE_SSE4__)
 
         // This version uses PMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -1773,7 +1781,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             sy = _mm_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE2__)
+#    elif defined(__USE_SSE2__)
 
         __m128i sx = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcX8), 0), 0);
         __m128i sy = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcY8), 0), 0);
@@ -1847,7 +1855,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             sy = _mm_add_epi16(sy, dy);
         }
 
-#elif defined(__ARM_NEON__)  // increased throughput
+#    elif defined(__ARM_NEON__)  // increased throughput
 
         __asm__ volatile(
             "	mov			r2, #4									\n\t"  // pixel
@@ -2064,12 +2072,12 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
                                                                                                                        // * destPitchInPixels + 32 )
             "	bne			.LP_LINEAR_PACKED_RGB_1%=				\n\t"
             :
-            : [sx] "r"(localSrcX8), [sy] "r"(localSrcY8), [dx] "r"(deltaX8), [dy] "r"(deltaY8), [s] "r"(localSrc), [d] "r"(destRow),
-              [p] "r"(srcPitchInTexels)
+            : [ sx ] "r"(localSrcX8), [ sy ] "r"(localSrcY8), [ dx ] "r"(deltaX8), [ dy ] "r"(deltaY8), [ s ] "r"(localSrc),
+              [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "r2", "r3", "r4", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12",
               "memory");
 
-#elif defined(__ARM_NEON__)  // compressed computation
+#    elif defined(__ARM_NEON__)  // compressed computation
 
         __asm__ volatile(
             "	mov			r3, #4							\n\t"  // destination pointer
@@ -2123,11 +2131,11 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             "	subs		r2, r2, #1						\n\t"
             "	bne			.LP_LINEAR_PACKED_RGB_2%=		\n\t"
             :
-            : [sx] "r"(localSrcX8), [sy] "r"(localSrcY8), [dx] "r"(deltaX8), [dy] "r"(deltaY8), [s] "r"(localSrc), [d] "r"(destRow),
-              [p] "r"(srcPitchInTexels)
+            : [ sx ] "r"(localSrcX8), [ sy ] "r"(localSrcY8), [ dx ] "r"(deltaX8), [ dy ] "r"(deltaY8), [ s ] "r"(localSrc),
+              [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "r2", "r3", "r4", "d0", "d1", "d2", "d3", "q0", "q1", "memory");
 
-#elif defined(__HEXAGON_V50__)  // 2 pixels per iteration appears to be optimal
+#    elif defined(__HEXAGON_V50__)  // 2 pixels per iteration appears to be optimal
 
         Word32 dxy1 = Q6_R_combine_RlRl(deltaY8, deltaX8);
         Word64 dxy2 = Q6_P_vaslh_PI(Q6_P_combine_RR(dxy1, dxy1), 1);
@@ -2163,7 +2171,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             cfrx01 = Q6_P_vaddub_PP(cfrx01, dfrx2);
         }
 
-#else
+#    else
 
         for (int x = 0; x < 32; x++) {
             const int sampleX = localSrcX8 >> STP;
@@ -2196,7 +2204,7 @@ static void Warp32x32_SampleLinearPackedRGB(const unsigned char *const src, cons
             localSrcY8 += deltaY8;
         }
 
-#endif
+#    endif
 
         scanLeftSrcX += scanLeftDeltaX;
         scanLeftSrcY += scanLeftDeltaY;
@@ -2215,11 +2223,11 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
 
     const int L32 = 5;   // log2( 32 )
     const int SCP = 16;  // scan-conversion precision
-#if defined(__USE_SSE4__) || defined(__USE_AVX2__)
+#    if defined(__USE_SSE4__) || defined(__USE_AVX2__)
     const int STP = 7;   // sub-texel precision
-#else
+#    else
     const int STP = 8;  // sub-texel precision
-#endif
+#    endif
 
     // ZeroCacheBox( dest, 32 * 4, 32, destPitchInPixels * 4 );
 
@@ -2297,7 +2305,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
 
         unsigned int *destRow = (unsigned int *)dest + y * destPitchInPixels;
 
-#if defined(__USE_AVX2__)
+#    if defined(__USE_AVX2__)
 
         // This version uses VPMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -2309,9 +2317,9 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
         __m256i dx = _mm256_broadcastw_epi16(_mm_cvtsi32_si128(deltaX8));
         __m256i dy = _mm256_broadcastw_epi16(_mm_cvtsi32_si128(deltaY8));
         __m256i pitch16 = _mm256_unpacklo_epi16(_mm256_broadcastw_epi16(_mm_cvtsi32_si128(srcPitchInTexels)), vector256_int16_1);
-#if 0
+#        if 0
 		__m256i pitch32 = _mm256_broadcastd_epi32( _mm_cvtsi32_si128( srcPitchInTexels ) );
-#endif
+#        endif
 
         sx = _mm256_add_epi16(sx, _mm256_mullo_epi16(dx, vector256_int16_012389AB4567CDEF));
         sy = _mm256_add_epi16(sy, _mm256_mullo_epi16(dy, vector256_int16_012389AB4567CDEF));
@@ -2324,7 +2332,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             __m256i of0 = _mm256_madd_epi16(_mm256_unpacklo_epi16(ay, ax), pitch16);
             __m256i of1 = _mm256_madd_epi16(_mm256_unpackhi_epi16(ay, ax), pitch16);
 
-#if 0  // using a gather appears to be slower on an Intel Core i7-4960HQ
+#        if 0  // using a gather appears to be slower on an Intel Core i7-4960HQ
 			__m256i o0 = _mm256_add_epi32( _mm256_unpacklo_epi32( of0, of0 ), vector256_int32_01010101 );
 			__m256i o1 = _mm256_add_epi32( _mm256_unpackhi_epi32( of0, of0 ), vector256_int32_01010101 );
 			__m256i o2 = _mm256_add_epi32( _mm256_unpacklo_epi32( of1, of1 ), vector256_int32_01010101 );
@@ -2351,7 +2359,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
 			__m256i r5 = _mm256_unpackhi_epi8( t2, t6 );
 			__m256i r6 = _mm256_unpacklo_epi8( t3, t7 );
 			__m256i r7 = _mm256_unpackhi_epi8( t3, t7 );
-#else
+#        else
             __m128i o0 = _mm256_extracti128_si256(of0, 0);
             __m128i o1 = _mm256_extracti128_si256(of0, 1);
             __m128i o2 = _mm256_extracti128_si256(of1, 0);
@@ -2415,7 +2423,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             __m256i r5 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), t9, 0), tD, 1);
             __m256i r6 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), tA, 0), tE, 1);
             __m256i r7 = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), tB, 0), tF, 1);
-#endif
+#        endif
 
             __m256i fy = _mm256_and_si256(sy, vector256_int16_127);
             __m256i fyb = _mm256_packus_epi16(fy, fy);
@@ -2468,7 +2476,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             sy = _mm256_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE4__)
+#    elif defined(__USE_SSE4__)
 
         // This version uses PMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -2561,7 +2569,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             sy = _mm_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE2__)
+#    elif defined(__USE_SSE2__)
 
         __m128i sx = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcX8), 0), 0);
         __m128i sy = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcY8), 0), 0);
@@ -2665,7 +2673,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             sy = _mm_add_epi32(sy, dy);
         }
 
-#elif defined(__ARM_NEON__)  // increased throughput
+#    elif defined(__ARM_NEON__)  // increased throughput
 
         __asm__ volatile(
             "	mov			r2, #4									\n\t"  // pixel
@@ -2990,12 +2998,12 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
                                                                                                                        // * destPitchInPixels + 32 )
             "	bne			.LP_BILINEAR_PACKED_RGB_1%=				\n\t"
             :
-            : [sx] "r"(localSrcX8), [sy] "r"(localSrcY8), [dx] "r"(deltaX8), [dy] "r"(deltaY8), [s] "r"(localSrc), [d] "r"(destRow),
-              [p] "r"(srcPitchInTexels)
+            : [ sx ] "r"(localSrcX8), [ sy ] "r"(localSrcY8), [ dx ] "r"(deltaX8), [ dy ] "r"(deltaY8), [ s ] "r"(localSrc),
+              [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "r2", "r3", "r4", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12",
               "memory");
 
-#elif defined(__ARM_NEON__)  // compressed computation
+#    elif defined(__ARM_NEON__)  // compressed computation
 
         __asm__ volatile(
             "	lsl			r2, %[p], #2						\n\t"  // srcPitchInTexels * 4
@@ -3105,11 +3113,11 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             "	subs		r4, r4, #1							\n\t"
             "	bne			.LP_BILINEAR_PACKED_RGB_2%=			\n\t"
             :
-            : [sx] "r"(localSrcX8), [sy] "r"(localSrcY8), [dx] "r"(deltaX8), [dy] "r"(deltaY8), [s] "r"(localSrc), [d] "r"(destRow),
-              [p] "r"(srcPitchInTexels)
+            : [ sx ] "r"(localSrcX8), [ sy ] "r"(localSrcY8), [ dx ] "r"(deltaX8), [ dy ] "r"(deltaY8), [ s ] "r"(localSrc),
+              [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "r2", "r3", "r4", "q0", "q1", "q2", "q3", "q4", "q5", "memory");
 
-#elif defined(__HEXAGON_V50__)  // transposed, 2 pixels per iteration appears to be optimal
+#    elif defined(__HEXAGON_V50__)  // transposed, 2 pixels per iteration appears to be optimal
 
         Word32 dxy0 = Q6_R_combine_RlRl(deltaY8, deltaX8);
         Word64 dxy2 = Q6_P_vaslh_PI(Q6_P_combine_RR(dxy0, dxy0), 1);  // dx2, dy2, dx2, dy2
@@ -3185,7 +3193,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             cfrY = Q6_P_vaddub_PP(cfrY, dfrY);
         }
 
-#else
+#    else
 
         for (int x = 0; x < 32; x++) {
             const int sampleX = localSrcX8 >> STP;
@@ -3237,7 +3245,7 @@ static void Warp32x32_SampleBilinearPackedRGB(const unsigned char *const src, co
             localSrcY8 += deltaY8;
         }
 
-#endif
+#    endif
 
         scanLeftSrcX += scanLeftDeltaX;
         scanLeftSrcY += scanLeftDeltaY;
@@ -3257,11 +3265,11 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
 
     const int L32 = 5;   // log2( 32 )
     const int SCP = 16;  // scan-conversion precision
-#if defined(__USE_SSE4__) || defined(__USE_AVX2__)
+#    if defined(__USE_SSE4__) || defined(__USE_AVX2__)
     const int STP = 7;   // sub-texel precision
-#else
+#    else
     const int STP = 8;  // sub-texel precision
-#endif
+#    endif
 
     // ZeroCacheBox( dest, 32 * 4, 32, destPitchInPixels * 4 );
 
@@ -3348,7 +3356,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
 
         unsigned int *destRow = (unsigned int *)dest + y * destPitchInPixels;
 
-#if defined(__USE_AVX2__)
+#    if defined(__USE_AVX2__)
 
         // This version uses VPMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -3373,7 +3381,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             __m256i of0 = _mm256_madd_epi16(_mm256_unpacklo_epi16(ay, ax), pitch16);
             __m256i of1 = _mm256_madd_epi16(_mm256_unpackhi_epi16(ay, ax), pitch16);
 
-#if 1
+#        if 1
             __m256i of2 = _mm256_add_epi32(of0, pitch32);
             __m256i of3 = _mm256_add_epi32(of1, pitch32);
 
@@ -3398,7 +3406,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             __m256i gb = _mm256_pack_epi32(gbl, gbh);
             __m256i bt = _mm256_pack_epi32(btl, bth);
             __m256i bb = _mm256_pack_epi32(bbl, bbh);
-#else
+#        else
             __m128i o0 = _mm256_extracti128_si256(of0, 0);
             __m128i o1 = _mm256_extracti128_si256(of0, 1);
             __m128i o2 = _mm256_extracti128_si256(of1, 0);
@@ -3547,7 +3555,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             __m256i gb = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), gbl, 0), gbh, 1);
             __m256i bt = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), btl, 0), bth, 1);
             __m256i bb = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), bbl, 0), bbh, 1);
-#endif
+#        endif
 
             __m256i fx = _mm256_and_si256(sx, vector256_int16_127);
             __m256i fxb = _mm256_packus_epi16(fx, fx);
@@ -3583,7 +3591,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             sy = _mm256_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE4__)
+#    elif defined(__USE_SSE4__)
 
         // This version uses PMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -3710,7 +3718,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             sy = _mm_add_epi16(sy, dy);
         }
 
-#elif defined(__USE_SSE2__)
+#    elif defined(__USE_SSE2__)
 
         __m128i sx = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcX8), 0), 0);
         __m128i sy = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcY8), 0), 0);
@@ -3846,7 +3854,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             sy = _mm_add_epi16(sy, dy);
         }
 
-#elif defined(__ARM_NEON__)  // increased throughput
+#    elif defined(__ARM_NEON__)  // increased throughput
 
         __asm__ volatile(
             "	movw		r0, #0x0100									\n\t"  // r0 =
@@ -4389,11 +4397,11 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
                                                                                                                                // * destPitchInPixels + 32 )
             "	bne			.LP_BILINEAR_PLANAR_RGB%=					\n\t"
             :
-            : [sx] "r"(localSrcX8), [sy] "r"(localSrcY8), [dx] "r"(deltaX8), [dy] "r"(deltaY8), [sr] "r"(localSrcRed),
-              [sg] "r"(localSrcGreen), [sb] "r"(localSrcBlue), [d] "r"(destRow), [p] "r"(srcPitchInTexels)
+            : [ sx ] "r"(localSrcX8), [ sy ] "r"(localSrcY8), [ dx ] "r"(deltaX8), [ dy ] "r"(deltaY8), [ sr ] "r"(localSrcRed),
+              [ sg ] "r"(localSrcGreen), [ sb ] "r"(localSrcBlue), [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "r2", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "memory");
 
-#elif 0  // defined( __HEXAGON_V50__ )	// 2 pixels per iteration appears to be optimal
+#    elif 0  // defined( __HEXAGON_V50__ )	// 2 pixels per iteration appears to be optimal
 
         Word32 dxy0 = Q6_R_combine_RlRl(deltaY8, deltaX8);
         Word64 dxy2 = Q6_P_vaslh_PI(Q6_P_combine_RR(dxy0, dxy0), 1);  // dx2, dy2, dx2, dy2
@@ -4489,7 +4497,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             cfrY = Q6_P_vaddub_PP(cfrY, dfrY);
         }
 
-#elif defined(__HEXAGON_V50__)  // 2 pixels per iteration appears to be optimal
+#    elif defined(__HEXAGON_V50__)  // 2 pixels per iteration appears to be optimal
 
         Word32 dxy0 = Q6_R_combine_RlRl(deltaY8, deltaX8);
         Word64 dxy2 = Q6_P_vaslh_PI(Q6_P_combine_RR(dxy0, dxy0), 1);  // dx2, dy2, dx2, dy2
@@ -4589,7 +4597,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             cfrY = Q6_P_vaddub_PP(cfrY, dfrY);
         }
 
-#else
+#    else
 
         for (int x = 0; x < 32; x++) {
             const int sampleX = localSrcX8 >> STP;
@@ -4638,7 +4646,7 @@ static void Warp32x32_SampleBilinearPlanarRGB(const unsigned char *const srcRed,
             localSrcY8 += deltaY8;
         }
 
-#endif
+#    endif
 
         scanLeftSrcX += scanLeftDeltaX;
         scanLeftSrcY += scanLeftDeltaY;
@@ -4660,11 +4668,11 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
 
     const int L32 = 5;   // log2( 32 )
     const int SCP = 16;  // scan-conversion precision
-#if defined(__USE_SSE4__) || defined(__USE_AVX2__)
+#    if defined(__USE_SSE4__) || defined(__USE_AVX2__)
     const int STP = 7;   // sub-texel precision
-#else
+#    else
     const int STP = 8;  // sub-texel precision
-#endif
+#    endif
 
     // ZeroCacheBox( dest, 32 * 4, 32, destPitchInPixels * 4 );
 
@@ -4848,7 +4856,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
 
         unsigned int *destRow = (unsigned int *)dest + y * destPitchInPixels;
 
-#if defined(__USE_AVX2__)
+#    if defined(__USE_AVX2__)
 
         // This version uses VPMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -4889,7 +4897,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
         __m256i pitch32 = _mm256_broadcastd_epi32(_mm_cvtsi32_si128(srcPitchInTexels));
 
         for (int x = 0; x < 32; x += 16) {
-#if 1
+#        if 1
             __m256i rax = _mm256_srai_epi16(rsx, STP);
             __m256i ray = _mm256_srai_epi16(rsy, STP);
 
@@ -4935,7 +4943,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
             __m256i gb = _mm256_pack_epi32(gbl, gbh);
             __m256i bt = _mm256_pack_epi32(btl, bth);
             __m256i bb = _mm256_pack_epi32(bbl, bbh);
-#else
+#        else
             __m256i rax = _mm256_srai_epi16(rsx, STP);
             __m256i ray = _mm256_srai_epi16(rsy, STP);
 
@@ -5146,7 +5154,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
             __m256i gb = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), gbl, 0), gbh, 1);
             __m256i bt = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), btl, 0), bth, 1);
             __m256i bb = _mm256_inserti128_si256(_mm256_inserti128_si256(_mm256_setzero_si256(), bbl, 0), bbh, 1);
-#endif
+#        endif
 
             __m256i rfx = _mm256_and_si256(rsx, vector256_int16_127);
             __m256i gfx = _mm256_and_si256(gsx, vector256_int16_127);
@@ -5197,7 +5205,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
             bsy = _mm256_add_epi16(bsy, bdy);
         }
 
-#elif defined(__USE_SSE4__)
+#    elif defined(__USE_SSE4__)
 
         // This version uses PMADDUBSW which unfortunately multiplies an unsigned byte with a *signed* byte.
         // As a result, any fraction over 127 will be interpreted as a negative fraction. To keep the
@@ -5387,7 +5395,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
             bsy = _mm_add_epi16(bsy, bdy);
         }
 
-#elif defined(__USE_SSE2__)
+#    elif defined(__USE_SSE2__)
 
         __m128i rsx = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcRedX8), 0), 0);
         __m128i rsy = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_cvtsi32_si128(localSrcRedY8), 0), 0);
@@ -5585,7 +5593,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
             bsy = _mm_add_epi16(bsy, bdy);
         }
 
-#elif defined(__ARM_NEON__)  // increased throughput
+#    elif defined(__ARM_NEON__)  // increased throughput
 
         int deltaRedXY = (deltaRedY8 << 16) | (deltaRedX8 & 0xFFFF);
         int deltaGreenXY = (deltaGreenY8 << 16) | (deltaGreenX8 & 0xFFFF);
@@ -6641,13 +6649,13 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
                                                                                                                                // stack
                                                                                                                                // space
             :
-            : [srxy] "r"(localSrcRedXY), [sgxy] "r"(localSrcGreenXY), [sbxy] "r"(localSrcBlueXY), [drxy] "r"(deltaRedXY),
-              [dgxy] "r"(deltaGreenXY), [dbxy] "r"(deltaBlueXY), [sr] "r"(localSrcRed), [sg] "r"(localSrcGreen),
-              [sb] "r"(localSrcBlue), [d] "r"(destRow), [p] "r"(srcPitchInTexels)
+            : [ srxy ] "r"(localSrcRedXY), [ sgxy ] "r"(localSrcGreenXY), [ sbxy ] "r"(localSrcBlueXY), [ drxy ] "r"(deltaRedXY),
+              [ dgxy ] "r"(deltaGreenXY), [ dbxy ] "r"(deltaBlueXY), [ sr ] "r"(localSrcRed), [ sg ] "r"(localSrcGreen),
+              [ sb ] "r"(localSrcBlue), [ d ] "r"(destRow), [ p ] "r"(srcPitchInTexels)
             : "r0", "r1", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15",
               "memory");
 
-#elif defined(__HEXAGON_V50__)  // 2 pixels per iteration appears to be optimal
+#    elif defined(__HEXAGON_V50__)  // 2 pixels per iteration appears to be optimal
 
         Word32 drxy0 = Q6_R_combine_RlRl(deltaRedY8, deltaRedX8);
         Word32 dgxy0 = Q6_R_combine_RlRl(deltaGreenY8, deltaGreenX8);
@@ -6805,7 +6813,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
             cbfrY = Q6_P_vaddub_PP(cbfrY, dbfrY);
         }
 
-#else
+#    else
 
         for (int x = 0; x < 32; x++) {
             const int sampleRedX = localSrcRedX8 >> STP;
@@ -6871,7 +6879,7 @@ static void Warp32x32_SampleChromaticBilinearPlanarRGB(const unsigned char *cons
             localSrcBlueY8 += deltaBlueY8;
         }
 
-#endif
+#    endif
 
         scanLeftSrcRedX += scanLeftDeltaRedX;
         scanLeftSrcRedY += scanLeftDeltaRedY;
@@ -6897,7 +6905,7 @@ Time Warp
 ================================================================================================
 */
 
-#include <utils/algebra.h>
+#    include <utils/algebra.h>
 
 static void CalculateTimeWarpTransform(ksMatrix4x4f *transform, const ksMatrix4x4f *renderProjectionMatrix,
                                        const ksMatrix4x4f *renderViewMatrix, const ksMatrix4x4f *newViewMatrix) {
@@ -7147,7 +7155,7 @@ Threaded Time Warp
 ================================================================================================================================
 */
 
-#include <utils/threading.h>
+#    include <utils/threading.h>
 
 typedef struct {
     ksAtomicUint32 rowCount;        // atomic counter shared by all workers
@@ -7176,13 +7184,13 @@ static void GetHmdViewMatrixForTime(ksMatrix4x4f *viewMatrix, const uint64_t tim
 }
 
 void TimeWarpThread(ksTimeWarpThreadData *data) {
-#if defined(__HEXAGON_V60__)
+#    if defined(__HEXAGON_V60__)
     int r = qurt_hvx_lock(QURT_HVX_MODE_64B);
     if (r != QURT_EOK) {
         // fall back to non HVX code?
         return;
     }
-#endif
+#    endif
 
     const size_t numMeshCoords = (data->destTilesHigh + 1) * (data->destTilesWide + 1);
     const ksMeshCoord *meshCoordsBasePtr = (const ksMeshCoord *)data->meshCoords;
@@ -7250,12 +7258,12 @@ void TimeWarpThread(ksTimeWarpThreadData *data) {
         }
     }
 
-#if defined(__HEXAGON_V60__)
+#    if defined(__HEXAGON_V60__)
     qurt_hvx_unlock();
-#endif
+#    endif
 }
 
-#if defined(OS_HEXAGON)
+#    if defined(OS_HEXAGON)
 
 // enum DalChipInfoFamilyType, adsp_proc\core\api\systemdrivers\DDIChipInfo.h
 enum {
@@ -7267,10 +7275,10 @@ enum {
     DALCHIPINFO_FAMILY_MSM8996 = 56,      // Snapdragon 820, Hexagon V60
 };
 
-#pragma weak HAP_get_chip_family_id
+#        pragma weak HAP_get_chip_family_id
 extern uint32_t HAP_get_chip_family_id(void);
 
-#pragma weak HAP_power_set
+#        pragma weak HAP_power_set
 extern int HAP_power_set(void *context, HAP_power_request_t *request);
 
 int TimeWarpInterface_GetDspVersion() {
@@ -7300,16 +7308,16 @@ int TimeWarpInterface_GetDspVersion() {
     return version;
 }
 
-#else  // !OS_HEXAGON
+#    else  // !OS_HEXAGON
 
 int TimeWarpInterface_GetDspVersion() { return 0; }
 
-#endif  // !OS_HEXAGON
+#    endif  // !OS_HEXAGON
 
 static ksThreadPool threadPool;
 
 int TimeWarpInterface_Init() {
-#if defined(OS_HEXAGON)
+#    if defined(OS_HEXAGON)
     //	const char * fileName = "atw_cpu_dsp.c";
     //	HAP_setFARFRuntimeLoggingParams( 0x1f, &fileName, 1 );
 
@@ -7320,9 +7328,9 @@ int TimeWarpInterface_Init() {
     const int result = HAP_power_request(DEFAULT_CLOCK_FREQ_PERCENTAGE, DEFAULT_BUS_FREQ_PERCENTAGE, DEFAULT_MAX_RPC_USEC);
     Print("HAP_power_request() %s\n", (result == 0) ? "succeeded" : "failed");
     Print("DSP %d%%, BUS %d%%, RPC %d uSec\n", DEFAULT_CLOCK_FREQ_PERCENTAGE, DEFAULT_BUS_FREQ_PERCENTAGE, DEFAULT_MAX_RPC_USEC);
-#endif
+#    endif
 
-#if defined(__HEXAGON_V60__)
+#    if defined(__HEXAGON_V60__)
     if ((void *)HAP_power_set != NULL) {
         HAP_power_request_t request;
         request.type = HAP_power_set_HVX;
@@ -7342,21 +7350,21 @@ int TimeWarpInterface_Init() {
         }
     }
     int reserved = qurt_hvx_reserve(QURT_HVX_RESERVE_ALL_AVAILABLE);
-#endif
+#    endif
 
     ksThreadPool_Create(&threadPool, 4);
 
-#if defined(__HEXAGON_V60__)
+#    if defined(__HEXAGON_V60__)
     return reserved;
-#else
+#    else
     return 0;  // AEE_SUCCESS
-#endif
+#    endif
 }
 
 int TimeWarpInterface_Shutdown() {
     ksThreadPool_Destroy(&threadPool);
 
-#if defined(__HEXAGON_V60__)
+#    if defined(__HEXAGON_V60__)
     qurt_hvx_cancel_reserve();
 
     if ((void *)HAP_power_set != NULL) {
@@ -7368,11 +7376,11 @@ int TimeWarpInterface_Shutdown() {
             Print("unable to power off HVX (result=%d)", retval);
         }
     }
-#endif
+#    endif
 
-#if defined(OS_HEXAGON)
+#    if defined(OS_HEXAGON)
     HAP_power_request(0, 0, -1);
-#endif
+#    endif
 
     return 0;  // AEE_SUCCESS
 }
@@ -7448,48 +7456,48 @@ Non-DSP code
 ================================================================================================
 */
 
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
 
-#include <conio.h>   // for getch()
-#include <malloc.h>  // for _aligned_malloc()
+#        include <conio.h>   // for getch()
+#        include <malloc.h>  // for _aligned_malloc()
 
-#define USE_DDK 0  // use the Driver Development Kit (DDK)
+#        define USE_DDK 0  // use the Driver Development Kit (DDK)
 
-#elif defined(OS_LINUX)
+#    elif defined(OS_LINUX)
 
-#include <malloc.h>  // for memalign()
+#        include <malloc.h>  // for memalign()
 
-#elif defined(OS_ANDROID)
+#    elif defined(OS_ANDROID)
 
-#include <malloc.h>  // for memalign()
-#include <time.h>    // for clock_gettime()
-#include <dlfcn.h>   // for dlopen()
-#include <fcntl.h>   // for ioctl(), O_RDONLY
-#include <sys/mman.h>
-#include "linux/types.h"
-#include "linux/ion.h"
+#        include <malloc.h>  // for memalign()
+#        include <time.h>    // for clock_gettime()
+#        include <dlfcn.h>   // for dlopen()
+#        include <fcntl.h>   // for ioctl(), O_RDONLY
+#        include <sys/mman.h>
+#        include "linux/types.h"
+#        include "linux/ion.h"
 
-#if defined(USE_DSP_TIMEWARP)
-#include "adspmsgd.h"
-#endif
+#        if defined(USE_DSP_TIMEWARP)
+#            include "adspmsgd.h"
+#        endif
 
-#define USE_ION_MEMORY 1
-#define ION_FLAG_CACHED 1  // copied from ion.h
-#define ION_HEAP_ID_SYSTEM_CONTIG 21
-#define ION_HEAP_ID_ADSP 22
-#define ION_HEAP_ID_PIL1 23
-#define ION_HEAP_ID_SYSTEM 25
+#        define USE_ION_MEMORY 1
+#        define ION_FLAG_CACHED 1  // copied from ion.h
+#        define ION_HEAP_ID_SYSTEM_CONTIG 21
+#        define ION_HEAP_ID_ADSP 22
+#        define ION_HEAP_ID_PIL1 23
+#        define ION_HEAP_ID_SYSTEM 25
 
-#endif
+#    endif
 
-#include <stdio.h>    // for fopen()
-#include <stdlib.h>   // for abs()
-#include <string.h>   // for memcpy()
-#include <stdbool.h>  // for bool
-#include <stdint.h>   // for uint32_t etc.
+#    include <stdio.h>    // for fopen()
+#    include <stdlib.h>   // for abs()
+#    include <string.h>   // for memcpy()
+#    include <stdbool.h>  // for bool
+#    include <stdint.h>   // for uint32_t etc.
 
-#include <utils/sysinfo.h>
-#include <utils/nanoseconds.h>
+#    include <utils/sysinfo.h>
+#    include <utils/nanoseconds.h>
 
 /*
 ================================================================================================
@@ -7650,7 +7658,7 @@ System level functionality
 ================================================================================================================================
 */
 
-#if defined(__hexagon__)  // some defs/stubs so app can build for Hexagon simulation
+#    if defined(__hexagon__)  // some defs/stubs so app can build for Hexagon simulation
 
 int HAP_power_request(int clock, int bus, int latency) { return 0; }
 
@@ -7665,29 +7673,29 @@ void HAP_debug_v2(int level, const char *file, int line, const char *format, ...
     HAP_debug(buf, level, file, line);
 }
 
-#endif
+#    endif
 
 static void *AllocAlignedMemory(size_t size, size_t alignment) {
     alignment = (alignment < sizeof(void *)) ? sizeof(void *) : alignment;
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
     return _aligned_malloc(size, alignment);
-#elif defined(OS_APPLE)
+#    elif defined(OS_APPLE)
     void *ptr = NULL;
     return (posix_memalign(&ptr, alignment, size) == 0) ? ptr : NULL;
-#else
+#    else
     return memalign(alignment, size);
-#endif
+#    endif
 }
 
 static void FreeAlignedMemory(void *ptr) {
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
     _aligned_free(ptr);
-#else
+#    else
     free(ptr);
-#endif
+#    endif
 }
 
-#if USE_DDK == 1
+#    if USE_DDK == 1
 
 typedef LARGE_INTEGER PHYSICAL_ADDRESS;
 
@@ -7707,9 +7715,9 @@ PVOID MmAllocateContiguousMemorySpecifyCache(_In_ SIZE_T NumberOfBytes, _In_ PHY
 
 VOID MmFreeContiguousMemory(_In_ PVOID BaseAddress);
 
-#endif  // USE_DDK
+#    endif  // USE_DDK
 
-#if USE_ION_MEMORY == 1
+#    if USE_ION_MEMORY == 1
 
 struct mmap_info {
     struct mmap_info *next;
@@ -7724,7 +7732,7 @@ static struct mmap_info *ion_memory;
 // Register memory buffers that live on contiguous physical memory and do
 // not need to be copied to contiguous physical memory for use by the DSP.
 extern void remote_register_buf(void *buf, int size, int fd);
-#pragma weak remote_register_buf
+#        pragma weak remote_register_buf
 
 static void dsp_register_buf(void *buf, int size, int fd) {
     if (remote_register_buf != NULL) {
@@ -7732,24 +7740,24 @@ static void dsp_register_buf(void *buf, int size, int fd) {
     }
 }
 
-#endif  // USE_ION_MEMORY
+#    endif  // USE_ION_MEMORY
 
 typedef enum { MEMORY_CACHED, MEMORY_WRITE_COMBINED } ksCachingType;
 
 // Allocates page aligned contiguous physical memory. Memory pages are typically 4kB.
 static void *AllocContiguousPhysicalMemory(size_t size, ksCachingType type) {
-#if defined(OS_WINDOWS) && USE_DDK == 1
+#    if defined(OS_WINDOWS) && USE_DDK == 1
     const PHYSICAL_ADDRESS min = {0x00000000, 0x00000000};
     const PHYSICAL_ADDRESS max = {0xFFFFFFFF, 0xFFFFFFFF};
     const PHYSICAL_ADDRESS zero = {0, 0};
     const MEMORY_CACHING_TYPE cache = (type == MEMORY_WRITE_COMBINED ? MmWriteCombined : MmCached);
     return MmAllocateContiguousMemorySpecifyCache(size, min, max, zero, cache);
-#elif defined(OS_WINDOWS)
+#    elif defined(OS_WINDOWS)
     // NOTE: VirtualAlloc does not allocate contiguous physical memory
     // but at least provides controll over the caching behavior.
     const DWORD flProtect = PAGE_READWRITE | (type == MEMORY_WRITE_COMBINED ? PAGE_WRITECOMBINE : 0);
     return VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, flProtect);
-#elif defined(OS_ANDROID) && USE_ION_MEMORY == 1
+#    elif defined(OS_ANDROID) && USE_ION_MEMORY == 1
     // NOTE: this implementation is not thread safe due to the use of an unproteced linked list.
     // The Android implementation of ion_heap_map_kernel() in ion_heap.c sets
     // pgprot_t pgprot = pgprot_writecombine(PAGE_KERNEL); when the ION_FLAG_CACHED
@@ -7816,19 +7824,19 @@ static void *AllocContiguousPhysicalMemory(size_t size, ksCachingType type) {
     dsp_register_buf(m->ptr, m->size, m->data.fd);
 
     return m->ptr;
-#else
+#    else
     // Fall back to regular memory.
     return AllocAlignedMemory(size, 4096);
-#endif
+#    endif
 }
 
 static void FreeContiguousPhysicalMemory(void *ptr, size_t size) {
-#if defined(OS_WINDOWS) && USE_DDK == 1
+#    if defined(OS_WINDOWS) && USE_DDK == 1
     size = size;
     MmFreeContiguousMemory(ptr);
-#elif defined(OS_WINDOWS)
+#    elif defined(OS_WINDOWS)
     VirtualFree(ptr, size, MEM_RELEASE);
-#elif defined(OS_ANDROID) && USE_ION_MEMORY == 1
+#    elif defined(OS_ANDROID) && USE_ION_MEMORY == 1
     size = size;
     for (struct mmap_info **m = &ion_memory; (*m) != NULL; m = &((*m)->next)) {
         if ((*m)->ptr == ptr) {
@@ -7841,10 +7849,10 @@ static void FreeContiguousPhysicalMemory(void *ptr, size_t size) {
             break;
         }
     }
-#else
+#    else
     size = size;
     FreeAlignedMemory(ptr);
-#endif
+#    endif
 }
 
 /*
@@ -7983,10 +7991,10 @@ void TestTimeWarp(const int srcTexelsWide, const int srcTexelsHigh, const ksHmdI
     const int dstSizeInBytes = hmdInfo->displayPixelsWide * hmdInfo->displayPixelsHigh * 4 * sizeof(unsigned char);
     unsigned char *dst = (unsigned char *)AllocContiguousPhysicalMemory(dstSizeInBytes, MEMORY_WRITE_COMBINED);
 
-#if defined(USE_DSP_TIMEWARP)
+#    if defined(USE_DSP_TIMEWARP)
     const int adspmsgd_result = adspmsgd_start(ION_HEAP_ID_SYSTEM, ION_FLAG_CACHED, 2 * 4096);
     printf("adspmsgd_start() %s\n", (adspmsgd_result == 0) ? "succeeded" : "failed");
-#endif
+#    endif
 
     int units = TimeWarpInterface_Init();
     Print("HVX units = %d\n", units);
@@ -8074,11 +8082,11 @@ void TestTimeWarp(const int srcTexelsWide, const int srcTexelsHigh, const ksHmdI
 
     TimeWarpInterface_Shutdown();
 
-#if defined(USE_DSP_TIMEWARP)
+#    if defined(USE_DSP_TIMEWARP)
     if (adspmsgd_result == 0) {
         adspmsgd_stop();
     }
-#endif
+#    endif
 
     FreeContiguousPhysicalMemory(dst, dstSizeInBytes);
     FreeContiguousPhysicalMemory(packedRGB, packedSizeInBytes);
@@ -8118,10 +8126,10 @@ int main(int argc, char *argv[]) {
 
     Print("--------------------------------\n");
 
-#if defined(OS_WINDOWS)
+#    if defined(OS_WINDOWS)
     Print("Press any key to continue.\n");
     _getch();
-#endif
+#    endif
 }
 
 #endif  // !defined( OS_HEXAGON )

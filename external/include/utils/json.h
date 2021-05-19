@@ -449,7 +449,7 @@ typedef enum
 	JSON_OBJECT		= 7,			// { "name" : <value>, "name" : <value>, ... }
 	JSON_ARRAY		= 8,			// [ <value>, <value>, ... ]
 	JSON_MAX_ENUM	= 0x7FFFFFFF	// Make sure this enum is 32 bits.
-} JsonType_t;
+} ksJsonType;
 
 // JSON node
 // 32-bit sizeof( ksJson ) = 64-bit sizeof( ksJson ) = 32
@@ -468,7 +468,7 @@ typedef struct ksJson
 		char *				valueString;	// string value
 		struct ksJson **	memberMap;		// object/array members
 	};
-	JsonType_t		type;					// type of value
+	ksJsonType		type;					// type of value
 	int				membersAllocated;		// number of allocated members
 	int				memberCount;			// number of actual members
 	int				memberIndex;			// mutable member index for faster lookups
@@ -784,7 +784,7 @@ static const double json_pow10[] =
 
 // Parses a number and stores the result in 'valueInt64', 'valueUint64' or 'valueDouble'.
 // Returns a pointer to the first character after the number.
-static const char * ksJson_ParseNumber( JsonType_t * type, int64_t * valueInt64, uint64_t * valueUint64, double * valueDouble,
+static const char * ksJson_ParseNumber( ksJsonType * type, int64_t * valueInt64, uint64_t * valueUint64, double * valueDouble,
 										const char * buffer, const char ** errorStringOut )
 {
 	(void)errorStringOut;

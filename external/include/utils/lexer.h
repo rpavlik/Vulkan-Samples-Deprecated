@@ -31,7 +31,7 @@ DESCRIPTION
 
 Basic C99-style lexer.
 
-This is a zero-allocation lexer. A token is returned as a pointer in the original input buffer.
+This is a zero-allocation stateless lexer. A token is returned as a pointer in the original input buffer.
 As a result:
 - All tokens are left untouched, including escape sequencies in strings and literals.
 - Multi-line strings are not automatically merged into a single token.

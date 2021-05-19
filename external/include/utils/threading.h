@@ -14,6 +14,8 @@ LICENSE
 
 Copyright (c) 2016 Oculus VR, LLC.
 
+SPDX-License-Identifier: Apache-2.0
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -88,10 +90,6 @@ limitations under the License.
 
 #if !defined( UNUSED_PARM )
 #define UNUSED_PARM( x )				{ (void)(x); }
-#endif
-
-#if !defined( ARRAY_SIZE )
-#define ARRAY_SIZE( a )					( sizeof( (a) ) / sizeof( (a)[0] ) )
 #endif
 
 /*
@@ -260,7 +258,7 @@ unfair or even incorrect behavior:
 	   http://www.cs.wustl.edu/~schmidt/win32-cv-1.html
 	2. "Patterns for POSIX Condition Variables on Win32"
 	   http://www.cs.wustl.edu/~schmidt/win32-cv-2.html
-	
+
 Even using SignalObjectAndWait is not safe because as per the Microsoft documentation: "Note that the 'signal'
 and 'wait' are not guaranteed to be performed as an atomic operation. Threads executing on other processors
 can observe the signaled state of the first object before the thread calling SignalObjectAndWait begins its
@@ -494,6 +492,7 @@ static void ksThread_Signal( ksThread * thread );
 static void ksThread_Join( ksThread * thread );
 static void ksThread_Submit( ksThread * thread, ksThreadFunction threadFunction, void * threadData );
 
+// These must be called from the thread itself.
 static void ksThread_SetName( const char * name );
 static void ksThread_SetAffinity( int mask );
 static void ksThread_SetRealTimePriority( int priority );
@@ -536,7 +535,8 @@ typedef struct
 // Note that on Android AttachCurrentThread will reset the thread name.
 static void ksThread_SetName( const char * name )
 {
-#if defined( OS_WINDOWS )
+	(void)name;
+#if defined( OS_WINDOWS ) && !defined(__MINGW32__)
 	static const unsigned int MS_VC_EXCEPTION = 0x406D1388;
 
 #pragma pack( push, 8 )
@@ -624,14 +624,14 @@ static void ksThread_SetAffinity( int mask )
 		unsigned int bestFrequency = 0;
 		for ( int i = 0; i < 16; i++ )
 		{
-			int maxFrequency = 0;
+			unsigned int maxFrequency = 0;
 			const char * files[] =
 			{
 				"scaling_available_frequencies",	// not available on all devices
 				"scaling_max_freq",					// no user read permission on all devices
 				"cpuinfo_max_freq",					// could be set lower than the actual max, but better than nothing
 			};
-			for ( int j = 0; j < ARRAY_SIZE( files ); j++ )
+			for ( unsigned int j = 0; j < ( sizeof(files) / sizeof(files[0]) ); j++ )
 			{
 				char fileName[1024];
 				sprintf( fileName, "/sys/devices/system/cpu/cpu%d/cpufreq/%s", i, files[j] );
@@ -729,11 +729,11 @@ static void ksThread_SetRealTimePriority( int priority )
 	sp.sched_priority = priority;
 	if ( pthread_setschedparam( pthread_self(), SCHED_FIFO, &sp ) == -1 )
 	{
-		printf( "Failed to change thread %d priority.\n", (unsigned int)pthread_self() );
+		printf( "Failed to change thread %llu priority.\n", (unsigned long long)pthread_self() );
 	}
 	else
 	{
-		printf( "Thread %d set to SCHED_FIFO, priority=%d\n", (unsigned int)pthread_self(), priority );
+		printf( "Thread %llu set to SCHED_FIFO, priority=%d\n", (unsigned long long)pthread_self(), priority );
 	}
 #elif defined( OS_ANDROID )
 	struct sched_attr
@@ -807,7 +807,11 @@ static THREAD_RETURN_TYPE ThreadFunctionInternal( void * data )
 
 static bool ksThread_Create( ksThread * thread, const char * threadName, ksThreadFunction threadFunction, void * threadData )
 {
+#if defined( OS_WINDOWS )
+	strncpy_s( thread->threadName, sizeof( thread->threadName ), threadName, sizeof( thread->threadName ) );
+#else
 	strncpy( thread->threadName, threadName, sizeof( thread->threadName ) );
+#endif
 	thread->threadName[sizeof( thread->threadName ) - 1] = '\0';
 	thread->threadFunction = threadFunction;
 	thread->threadData = threadData;
@@ -924,7 +928,7 @@ typedef struct
 	int			threadCount;
 } ksThreadPool;
 
-void PoolStartThread( void * data )
+static void PoolThreadStartFunction( void * data )
 {
 	UNUSED_PARM( data );
 
@@ -945,7 +949,7 @@ static void ksThreadPool_Create( ksThreadPool * pool, const int numWorkers )
 
 	for ( int i = 0; i < pool->threadCount; i++ )
 	{
-		ksThread_Create( &pool->threads[i], "worker", PoolStartThread, NULL );
+		ksThread_Create( &pool->threads[i], "worker", PoolThreadStartFunction, NULL );
 		ksThread_Signal( &pool->threads[i] );
 		ksThread_Join( &pool->threads[i] );
 	}

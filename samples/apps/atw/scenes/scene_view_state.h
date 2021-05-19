@@ -69,7 +69,7 @@ static void ksViewState_DerivedData( ksViewState * viewState, const ksMatrix4x4f
 	combinedProjectionMatrix = viewState->projectionMatrix[0];
 	combinedProjectionMatrix.m[0][0] = viewState->projectionMatrix[0].m[0][0] / ( fabsf( viewState->projectionMatrix[0].m[2][0] ) + 1.0f );
 	combinedProjectionMatrix.m[2][0] = 0.0f;
- 
+
 	ksMatrix4x4f moveBackMatrix;
 	ksMatrix4x4f_CreateTranslation( &moveBackMatrix, 0.0f, 0.0f, -0.5f * viewState->interpupillaryDistance * combinedProjectionMatrix.m[0][0] );
 

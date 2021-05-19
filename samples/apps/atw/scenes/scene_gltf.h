@@ -217,6 +217,10 @@ static void ksGltfScene_Render( ksGpuCommandBuffer * commandBuffer, const ksGltf
 #include <utils/base64.h>
 #include <utils/lexer.h>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4061)
+#endif
 #if GRAPHICS_API_OPENGL == 0 && GRAPHICS_API_OPENGL_ES == 0
 
 #define GL_BYTE							0x1400
@@ -1638,6 +1642,13 @@ static void ksGltf_ParseUniformValue( ksGltfUniformValue * value, const ksJson *
 		case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X2:	ksGltf_ParseFloatArray( value->floatValue, 4*2, json ); break;
 		case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X3:	ksGltf_ParseFloatArray( value->floatValue, 4*3, json ); break;
 		case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X4:	ksGltf_ParseFloatArray( value->floatValue, 4*4, json ); break;
+		// unhandled, should not get here.
+		case KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE:
+		case KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE:
+		case KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM:
+		case KS_GPU_PROGRAM_PARM_TYPE_MAX:
+		assert(0);
+		break;
 		default: break;
 	}
 }
@@ -5246,6 +5257,11 @@ static void ksGltfScene_SetUniformValue( ksGpuGraphicsCommand * command, const k
 		case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X2:	ksGpuGraphicsCommand_SetParmFloatMatrix4x2( command, uniform->index, (const ksMatrix4x2f *)value->floatValue ); break;
 		case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X3:	ksGpuGraphicsCommand_SetParmFloatMatrix4x3( command, uniform->index, (const ksMatrix4x3f *)value->floatValue ); break;
 		case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X4:	ksGpuGraphicsCommand_SetParmFloatMatrix4x4( command, uniform->index, (const ksMatrix4x4f *)value->floatValue ); break;
+		case KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE:					assert(0); break;
+		case KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE:					assert(0); break;
+		case KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM:					assert(0); break;
+		case KS_GPU_PROGRAM_PARM_TYPE_MAX:
+			break;
 		default: break;
 	}
 }
@@ -5388,3 +5404,6 @@ static void ksGltfScene_Render( ksGpuCommandBuffer * commandBuffer, const ksGltf
 		}
 	}
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

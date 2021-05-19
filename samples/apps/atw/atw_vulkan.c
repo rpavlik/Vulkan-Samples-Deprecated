@@ -1009,6 +1009,10 @@ Vulkan error checking.
 
 #define VK_ERROR_INVALID_SHADER_NV		-1002
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4061)
+#endif
 const char * VkErrorString( VkResult result )
 {
 	switch( result )
@@ -1046,6 +1050,10 @@ const char * VkErrorString( VkResult result )
 		}
 	}
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 static void VkCheckErrors( VkResult result, const char * function )
 {
@@ -2446,6 +2454,10 @@ static bool ksGpuSwapchain_Create( ksGpuContext * context, ksGpuSwapchain * swap
 
 	Print( "--------------------------------\n" );
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4061)
+#endif
 	for ( uint32_t i = 0; i < formatCount; i++ )
 	{
 		const char * formatString = NULL;
@@ -2469,6 +2481,9 @@ static bool ksGpuSwapchain_Create( ksGpuContext * context, ksGpuSwapchain * swap
 				formatString, ( swapchain->internalFormat == surfaceFormats[i].format ) ? " (used)" : "" );
 	}
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 	free( surfaceFormats );
 	surfaceFormats = NULL;
 
@@ -2502,6 +2517,10 @@ static bool ksGpuSwapchain_Create( ksGpuContext * context, ksGpuSwapchain * swap
 		}
 	}
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4061)
+#endif
 	for ( uint32_t i = 0; i < presentModeCount; i++ )
 	{
 		const char * formatString = NULL;
@@ -2523,6 +2542,9 @@ static bool ksGpuSwapchain_Create( ksGpuContext * context, ksGpuSwapchain * swap
 				formatString, ( presentModes[i] == swapchainPresentMode ) ? " (used)" : "" );
 	}
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 	free( presentModes );
 	presentModes = NULL;
 
@@ -6425,6 +6447,10 @@ static bool ksGpuTexture_CreateInternal( ksGpuContext * context, ksGpuTexture * 
 					bufferImageCopy[bufferImageCopyIndex].imageExtent.depth = 1;
 					bufferImageCopyIndex++;
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4061)
+#endif
 					uint32_t mipSize = 0;
 					switch ( format )
 					{
@@ -6565,6 +6591,9 @@ static bool ksGpuTexture_CreateInternal( ksGpuContext * context, ksGpuTexture * 
 						}
 					}
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 					assert( dataOffset + mipSize <= dataSize );
 
 					totalMipSize += mipSize;

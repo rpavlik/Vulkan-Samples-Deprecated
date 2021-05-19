@@ -9493,6 +9493,12 @@ static void ksGpuCommandBuffer_UpdateProgramParms( const ksGpuProgramParmLayout 
 					case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X2:	GL( glUniformMatrix4x2fv( location, 1, GL_FALSE, (const GLfloat *)newData ) ); break;
 					case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X3:	GL( glUniformMatrix4x3fv( location, 1, GL_FALSE, (const GLfloat *)newData ) ); break;
 					case KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X4:	GL( glUniformMatrix4fv( location, 1, GL_FALSE, (const GLfloat *)newData ) ); break;
+					case KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_SAMPLED:
+					case KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE:
+					case KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE:
+					case KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM:
+						// these were handled above, not possible to reach these.
+					case KS_GPU_PROGRAM_PARM_TYPE_MAX:
 					default: assert( false ); break;
 				}
 			}

@@ -259,7 +259,7 @@ limitations are:
   can be easily extended if more complex rendering algorithms are desired.
 
 - A pipeline can only use 256 bytes worth of plain integer and floating-point
-  uniforms, including vectors and matrices. If more uniforms are needed then 
+  uniforms, including vectors and matrices. If more uniforms are needed then
   it is advised to use a uniform buffer, which is the preferred approach for
   exposing large amounts of data anyway.
 
@@ -390,7 +390,7 @@ Platform headers / declarations
 		#pragma warning( disable : 4710	)	// 'int printf(const char *const ,...)': function not inlined
 		#pragma warning( disable : 4711 )	// function '<name>' selected for automatic inline expansion
 		#pragma warning( disable : 4738 )	// storing 32-bit float result in memory, possible loss of performance
-		#pragma warning( disable : 4820 )	// '<name>' : 'X' bytes padding added after data member '<member>'		
+		#pragma warning( disable : 4820 )	// '<name>' : 'X' bytes padding added after data member '<member>'
 	#endif
 
 	#if _MSC_VER >= 1900
@@ -493,7 +493,7 @@ Platform headers / declarations
 	typedef void * CGSConnectionID;
 	typedef int CGSWindowID;
 	typedef int CGSSurfaceID;
-    
+
 	CGLError CGLSetSurface( CGLContextObj ctx, CGSConnectionID cid, CGSWindowID wid, CGSSurfaceID sid );
 	CGLError CGLGetSurface( CGLContextObj ctx, CGSConnectionID * cid, CGSWindowID * wid, CGSSurfaceID * sid );
 	CGLError CGLUpdateContext( CGLContextObj ctx );
@@ -1559,7 +1559,7 @@ static void GlInitExtensions()
 	glFramebufferTextureMultisampleMultiviewOVR		= (PFNGLFRAMEBUFFERTEXTUREMULTISAMPLEMULTIVIEWOVRPROC)	GetExtension( "glFramebufferTextureMultisampleMultiviewOVR" );
 
 	glTexStorage3DMultisample						= (PFNGLTEXSTORAGE3DMULTISAMPLEPROC)					GetExtension( "glTexStorage3DMultisample" );
-	
+
 	glExtensions.timer_query						= GlCheckExtension( "GL_EXT_disjoint_timer_query" );
 	glExtensions.texture_clamp_to_border			= GlCheckExtension( "GL_EXT_texture_border_clamp" ) || GlCheckExtension( "GL_OES_texture_border_clamp" );
 	glExtensions.buffer_storage						= GlCheckExtension( "GL_EXT_buffer_storage" );
@@ -3015,7 +3015,7 @@ static bool ksGpuWindow_Create( ksGpuWindow * window, ksDriverInstance * instanc
 		Error( "Failed to register window class." );
 		return false;
 	}
-	
+
 	DWORD dwExStyle = 0;
 	DWORD dwStyle = 0;
 	if ( window->windowFullscreen )
@@ -3918,7 +3918,7 @@ static bool ChangeVideoMode_XcbRandR_1_4( xcb_connection_t * connection, xcb_scr
 	xcb_randr_mode_info_t * mode_info = xcb_randr_get_screen_resources_modes( screen_resources_reply );
 	const int modes_length = xcb_randr_get_screen_resources_modes_length( screen_resources_reply );
 	assert( modes_length > 0 );
-	
+
 	xcb_randr_crtc_t * crtcs = xcb_randr_get_screen_resources_crtcs( screen_resources_reply );
 	const int crtcs_length = xcb_randr_get_screen_resources_crtcs_length( screen_resources_reply );
 	assert( crtcs_length > 0 );
@@ -4488,7 +4488,7 @@ static bool ksGpuWindow_Create( ksGpuWindow * window, ksDriverInstance * instanc
 	{
 		NSScreen * screen = [NSScreen mainScreen];
 		NSRect screenRect = [screen frame];
-		
+
 		window->nsView = [MyNSView alloc];
 		[window->nsView initWithFrame:screenRect];
 
@@ -4767,7 +4767,7 @@ static ksGpuWindowEvent ksGpuWindow_ProcessEvents( ksGpuWindow * window )
 		window->windowActive = true;
 		return KS_GPU_WINDOW_EVENT_ACTIVATED;
 	}
-	
+
 	return KS_GPU_WINDOW_EVENT_NONE;
 }
 
@@ -7499,7 +7499,7 @@ typedef enum
 	KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE,				// not sampled, direct read-write storage	(GLSL: image*, iimage*, uimage*)
 	KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM,				// read-only uniform buffer					(GLSL: uniform)
 	KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE,				// read-write storage buffer				(GLSL: buffer)
-	KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT,				// int										(GLSL: int) 
+	KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT,				// int										(GLSL: int)
 	KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR2,		// int[2]									(GLSL: ivec2)
 	KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR3,		// int[3]									(GLSL: ivec3)
 	KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR4,		// int[4]									(GLSL: ivec4)
@@ -11290,7 +11290,7 @@ static void ksTimeWarpCompute_Render( ksGpuCommandBuffer * commandBuffer, ksTime
 			ksGpuComputeCommand_SetParmFloatMatrix3x4( &command, COMPUTE_PROGRAM_UNIFORM_TIMEWARP_END_TRANSFORM, &timeWarpEndTransform3x4 );
 			ksGpuComputeCommand_SetParmIntVector2( &command, COMPUTE_PROGRAM_UNIFORM_TIMEWARP_DIMENSIONS, &dimensions );
 			ksGpuComputeCommand_SetParmInt( &command, COMPUTE_PROGRAM_UNIFORM_TIMEWARP_EYE, &eyeIndex[eye] );
-			ksGpuComputeCommand_SetDimensions( &command, ( dimensions.x + TRANSFORM_LOCAL_SIZE_X - 1 ) / TRANSFORM_LOCAL_SIZE_X, 
+			ksGpuComputeCommand_SetDimensions( &command, ( dimensions.x + TRANSFORM_LOCAL_SIZE_X - 1 ) / TRANSFORM_LOCAL_SIZE_X,
 														( dimensions.y + TRANSFORM_LOCAL_SIZE_Y - 1 ) / TRANSFORM_LOCAL_SIZE_Y, 1 );
 
 			ksGpuCommandBuffer_SubmitComputeCommand( commandBuffer, &command );
@@ -12927,7 +12927,7 @@ static int StartApplication( int argc, char * argv[] )
 	ksStartupSettings startupSettings;
 	memset( &startupSettings, 0, sizeof( startupSettings ) );
 	startupSettings.startupTimeNanoseconds = GetTimeNanoseconds();
-	
+
 	for ( int i = 1; i < argc; i++ )
 	{
 		const char * arg = argv[i];
@@ -13045,10 +13045,10 @@ int APIENTRY WinMain( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lps
 		if ( lpszCmdLine[0] == '\0' ) { break; }
 
 		argv[argc++] = lpszCmdLine;
-        
+
 		while ( lpszCmdLine[0] != '\0' && lpszCmdLine[0] != ' ' ) { lpszCmdLine++; }
 		if ( lpszCmdLine[0] == '\0' ) { break; }
-        
+
 		*lpszCmdLine++ = '\0';
 	}
 
@@ -13227,7 +13227,7 @@ int main( int argc, char * argv[] )
 	SetBundleCWD( argv[0] );
 
 	autoReleasePool = [[NSAutoreleasePool alloc] init];
-	
+
 	[NSApplication sharedApplication];
 	[NSApp finishLaunching];
 	[NSApp activateIgnoringOtherApps:YES];

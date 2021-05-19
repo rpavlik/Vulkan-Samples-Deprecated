@@ -1890,7 +1890,7 @@ unsigned char * ksGltf_ConvertShaderGLSL( const unsigned char * source, size_t *
 					strlen( viewProjectionUniformBufferString );
 
 	// KHR_glsl_multi_view
-	const char * multiviewString = 
+	const char * multiviewString =
 					"#define NUM_VIEWS 2\n"
 					"#define VIEW_ID gl_ViewID_OVR\n"
 					"#extension GL_OVR_multiview2 : require\n"

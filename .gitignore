@@ -4,3 +4,9 @@
 *.obj
 *.exe
 build/
+.*
+!.gitignore
+!.appveyor
+!.gitattributes
+!.travis.yml
+!.editorconfig

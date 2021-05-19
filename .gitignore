@@ -10,3 +10,4 @@ build/
 !.gitattributes
 !.travis.yml
 !.editorconfig
+!.clang-format

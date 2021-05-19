@@ -1028,9 +1028,9 @@ Timer queries that are issued inside a render pass may not produce accurate time
 
 ksGpuTimer
 
-static void ksGpuTimer_Create( ksGpuContext * context, ksGpuTimer * timer );
-static void ksGpuTimer_Destroy( ksGpuContext * context, ksGpuTimer * timer );
-static ksNanoseconds ksGpuTimer_GetNanoseconds( ksGpuTimer * timer );
+void ksGpuTimer_Create( ksGpuContext * context, ksGpuTimer * timer );
+void ksGpuTimer_Destroy( ksGpuContext * context, ksGpuTimer * timer );
+ksNanoseconds ksGpuTimer_GetNanoseconds( ksGpuTimer * timer );
 
 ================================================================================================================================
 */
@@ -1047,6 +1047,599 @@ typedef struct {
 void ksGpuTimer_Create(ksGpuContext *context, ksGpuTimer *timer);
 void ksGpuTimer_Destroy(ksGpuContext *context, ksGpuTimer *timer);
 ksNanoseconds ksGpuTimer_GetNanoseconds(ksGpuTimer *timer);
+
+/*
+================================================================================================================================
+
+GPU buffer.
+
+A buffer maintains a block of memory for a specific use by GPU programs (vertex, index, uniform, storage).
+For optimal performance a buffer should only be created at load time, not at runtime.
+The best performance is typically achieved when the buffer is not host visible.
+
+ksGpuBufferType
+ksGpuBuffer
+
+bool ksGpuBuffer_Create( ksGpuContext * context, ksGpuBuffer * buffer, const ksGpuBufferType type,
+                                                        const size_t dataSize, const void * data, const bool hostVisible );
+void ksGpuBuffer_CreateReference( ksGpuContext * context, ksGpuBuffer * buffer, const ksGpuBuffer * other );
+void ksGpuBuffer_Destroy( ksGpuContext * context, ksGpuBuffer * buffer );
+
+================================================================================================================================
+*/
+
+typedef enum {
+    KS_GPU_BUFFER_TYPE_VERTEX,
+    KS_GPU_BUFFER_TYPE_INDEX,
+    KS_GPU_BUFFER_TYPE_UNIFORM,
+    KS_GPU_BUFFER_TYPE_STORAGE
+} ksGpuBufferType;
+
+typedef struct {
+    GLuint target;
+    GLuint buffer;
+    size_t size;
+    bool owner;
+} ksGpuBuffer;
+bool ksGpuBuffer_Create(ksGpuContext *context, ksGpuBuffer *buffer, const ksGpuBufferType type, const size_t dataSize,
+                        const void *data, const bool hostVisible);
+void ksGpuBuffer_CreateReference(ksGpuContext *context, ksGpuBuffer *buffer, const ksGpuBuffer *other);
+
+void ksGpuBuffer_Destroy(ksGpuContext *context, ksGpuBuffer *buffer);
+
+/*
+================================================================================================================================
+
+GPU texture.
+
+Supports loading textures from raw data or KTX container files.
+Textures are always created as immutable textures.
+For optimal performance a texture should only be created or modified at load time, not at runtime.
+Note that the geometry code assumes the texture origin 0,0 = left-top as opposed to left-bottom.
+In other words, textures are expected to be stored top-down as opposed to bottom-up.
+
+ksGpuTextureFormat
+ksGpuTextureUsage
+ksGpuTextureWrapMode
+ksGpuTextureFilter
+ksGpuTextureDefault
+ksGpuTexture
+
+bool ksGpuTexture_Create2D( ksGpuContext * context, ksGpuTexture * texture, const ksGpuTextureFormat format, const ksGpuSampleCount
+sampleCount, const int width, const int height, const int mipCount, const ksGpuTextureUsageFlags usageFlags, const void * data,
+const size_t dataSize );
+
+bool ksGpuTexture_Create2DArray( ksGpuContext * context, ksGpuTexture * texture, const
+ksGpuTextureFormat format, const ksGpuSampleCount sampleCount, const int width, const int height, const int layerCount, const int
+mipCount, const ksGpuTextureUsageFlags usageFlags, const void * data, const size_t dataSize );
+
+bool ksGpuTexture_CreateDefault( ksGpuContext * context, ksGpuTexture * texture, const ksGpuTextureDefault defaultType, const int
+width, const int height, const int depth, const int layerCount, const int faceCount, const bool mipmaps, const bool border );
+
+bool ksGpuTexture_CreateFromSwapchain( ksGpuContext * context, ksGpuTexture * texture, const ksGpuWindow * window, int index );
+
+bool ksGpuTexture_CreateFromFile( ksGpuContext * context, ksGpuTexture * texture, const char * fileName );
+
+void ksGpuTexture_Destroy( ksGpuContext * context, ksGpuTexture * texture );
+
+void ksGpuTexture_SetFilter( ksGpuContext * context, ksGpuTexture * texture, const ksGpuTextureFilter filter );
+void ksGpuTexture_SetAniso( ksGpuContext * context, ksGpuTexture * texture, const float maxAniso );
+void ksGpuTexture_SetWrapMode( ksGpuContext * context, ksGpuTexture * texture, const ksGpuTextureWrapMode wrapMode );
+
+================================================================================================================================
+*/
+
+// Note that the channel listed first in the name shall occupy the least significant bit.
+typedef enum {
+    //
+    // 8 bits per component
+    //
+    KS_GPU_TEXTURE_FORMAT_R8_UNORM = GL_R8,           // 1-component, 8-bit unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_R8G8_UNORM = GL_RG8,        // 2-component, 8-bit unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_R8G8B8A8_UNORM = GL_RGBA8,  // 4-component, 8-bit unsigned normalized
+
+    KS_GPU_TEXTURE_FORMAT_R8_SNORM = GL_R8_SNORM,           // 1-component, 8-bit signed normalized
+    KS_GPU_TEXTURE_FORMAT_R8G8_SNORM = GL_RG8_SNORM,        // 2-component, 8-bit signed normalized
+    KS_GPU_TEXTURE_FORMAT_R8G8B8A8_SNORM = GL_RGBA8_SNORM,  // 4-component, 8-bit signed normalized
+
+    KS_GPU_TEXTURE_FORMAT_R8_UINT = GL_R8UI,           // 1-component, 8-bit unsigned integer
+    KS_GPU_TEXTURE_FORMAT_R8G8_UINT = GL_RG8UI,        // 2-component, 8-bit unsigned integer
+    KS_GPU_TEXTURE_FORMAT_R8G8B8A8_UINT = GL_RGBA8UI,  // 4-component, 8-bit unsigned integer
+
+    KS_GPU_TEXTURE_FORMAT_R8_SINT = GL_R8I,           // 1-component, 8-bit signed integer
+    KS_GPU_TEXTURE_FORMAT_R8G8_SINT = GL_RG8I,        // 2-component, 8-bit signed integer
+    KS_GPU_TEXTURE_FORMAT_R8G8B8A8_SINT = GL_RGBA8I,  // 4-component, 8-bit signed integer
+
+#if defined(GL_SR8)
+    KS_GPU_TEXTURE_FORMAT_R8_SRGB = GL_SR8,     // 1-component, 8-bit sRGB
+    KS_GPU_TEXTURE_FORMAT_R8G8_SRGB = GL_SRG8,  // 2-component, 8-bit sRGB
+#elif defined(GL_SR8_EXT)
+    KS_GPU_TEXTURE_FORMAT_R8_SRGB = GL_SR8_EXT,                      // 1-component, 8-bit sRGB
+    KS_GPU_TEXTURE_FORMAT_R8G8_SRGB = GL_SRG8_EXT,                   // 2-component, 8-bit sRGB
+#endif
+    KS_GPU_TEXTURE_FORMAT_R8G8B8A8_SRGB = GL_SRGB8_ALPHA8,  // 4-component, 8-bit sRGB
+
+//
+// 16 bits per component
+//
+#if defined(GL_R16)
+    KS_GPU_TEXTURE_FORMAT_R16_UNORM = GL_R16,              // 1-component, 16-bit unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16_UNORM = GL_RG16,          // 2-component, 16-bit unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16B16A16_UNORM = GL_RGBA16,  // 4-component, 16-bit unsigned normalized
+#elif defined(GL_R16_EXT)
+    KS_GPU_TEXTURE_FORMAT_R16_UNORM = GL_R16_EXT,                    // 1-component, 16-bit unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16_UNORM = GL_RG16_EXT,                // 2-component, 16-bit unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16B16A16_UNORM = GL_RGBA16_EXT,        // 4-component, 16-bit unsigned normalized
+#endif
+
+#if defined(GL_R16_SNORM)
+    KS_GPU_TEXTURE_FORMAT_R16_SNORM = GL_R16_SNORM,              // 1-component, 16-bit signed normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16_SNORM = GL_RG16_SNORM,          // 2-component, 16-bit signed normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16B16A16_SNORM = GL_RGBA16_SNORM,  // 4-component, 16-bit signed normalized
+#elif defined(GL_R16_SNORM_EXT)
+    KS_GPU_TEXTURE_FORMAT_R16_SNORM = GL_R16_SNORM_EXT,              // 1-component, 16-bit signed normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16_SNORM = GL_RG16_SNORM_EXT,          // 2-component, 16-bit signed normalized
+    KS_GPU_TEXTURE_FORMAT_R16G16B16A16_SNORM = GL_RGBA16_SNORM_EXT,  // 4-component, 16-bit signed normalized
+#endif
+
+    KS_GPU_TEXTURE_FORMAT_R16_UINT = GL_R16UI,              // 1-component, 16-bit unsigned integer
+    KS_GPU_TEXTURE_FORMAT_R16G16_UINT = GL_RG16UI,          // 2-component, 16-bit unsigned integer
+    KS_GPU_TEXTURE_FORMAT_R16G16B16A16_UINT = GL_RGBA16UI,  // 4-component, 16-bit unsigned integer
+
+    KS_GPU_TEXTURE_FORMAT_R16_SINT = GL_R16I,              // 1-component, 16-bit signed integer
+    KS_GPU_TEXTURE_FORMAT_R16G16_SINT = GL_RG16I,          // 2-component, 16-bit signed integer
+    KS_GPU_TEXTURE_FORMAT_R16G16B16A16_SINT = GL_RGBA16I,  // 4-component, 16-bit signed integer
+
+    KS_GPU_TEXTURE_FORMAT_R16_SFLOAT = GL_R16F,              // 1-component, 16-bit floating-point
+    KS_GPU_TEXTURE_FORMAT_R16G16_SFLOAT = GL_RG16F,          // 2-component, 16-bit floating-point
+    KS_GPU_TEXTURE_FORMAT_R16G16B16A16_SFLOAT = GL_RGBA16F,  // 4-component, 16-bit floating-point
+
+    //
+    // 32 bits per component
+    //
+    KS_GPU_TEXTURE_FORMAT_R32_UINT = GL_R32UI,              // 1-component, 32-bit unsigned integer
+    KS_GPU_TEXTURE_FORMAT_R32G32_UINT = GL_RG32UI,          // 2-component, 32-bit unsigned integer
+    KS_GPU_TEXTURE_FORMAT_R32G32B32A32_UINT = GL_RGBA32UI,  // 4-component, 32-bit unsigned integer
+
+    KS_GPU_TEXTURE_FORMAT_R32_SINT = GL_R32I,              // 1-component, 32-bit signed integer
+    KS_GPU_TEXTURE_FORMAT_R32G32_SINT = GL_RG32I,          // 2-component, 32-bit signed integer
+    KS_GPU_TEXTURE_FORMAT_R32G32B32A32_SINT = GL_RGBA32I,  // 4-component, 32-bit signed integer
+
+    KS_GPU_TEXTURE_FORMAT_R32_SFLOAT = GL_R32F,              // 1-component, 32-bit floating-point
+    KS_GPU_TEXTURE_FORMAT_R32G32_SFLOAT = GL_RG32F,          // 2-component, 32-bit floating-point
+    KS_GPU_TEXTURE_FORMAT_R32G32B32A32_SFLOAT = GL_RGBA32F,  // 4-component, 32-bit floating-point
+
+//
+// S3TC/DXT/BC
+//
+#if defined(GL_COMPRESSED_RGB_S3TC_DXT1_EXT)
+    KS_GPU_TEXTURE_FORMAT_BC1_R8G8B8_UNORM =
+        GL_COMPRESSED_RGB_S3TC_DXT1_EXT,  // 3-component, line through 3D space, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_BC1_R8G8B8A1_UNORM =
+        GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,  // 4-component, line through 3D space plus 1-bit alpha, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_BC2_R8G8B8A8_UNORM =
+        GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,  // 4-component, line through 3D space plus line through 1D space, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_BC3_R8G8B8A4_UNORM =
+        GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,  // 4-component, line through 3D space plus 4-bit alpha, unsigned normalized
+#endif
+
+#if defined(GL_COMPRESSED_SRGB_S3TC_DXT1_EXT)
+    KS_GPU_TEXTURE_FORMAT_BC1_R8G8B8_SRGB = GL_COMPRESSED_SRGB_S3TC_DXT1_EXT,  // 3-component, line through 3D space, sRGB
+    KS_GPU_TEXTURE_FORMAT_BC1_R8G8B8A1_SRGB =
+        GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,  // 4-component, line through 3D space plus 1-bit alpha, sRGB
+    KS_GPU_TEXTURE_FORMAT_BC2_R8G8B8A8_SRGB =
+        GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,  // 4-component, line through 3D space plus line through 1D space, sRGB
+    KS_GPU_TEXTURE_FORMAT_BC3_R8G8B8A4_SRGB =
+        GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,  // 4-component, line through 3D space plus 4-bit alpha, sRGB
+#endif
+
+#if defined(GL_COMPRESSED_LUMINANCE_LATC1_EXT)
+    KS_GPU_TEXTURE_FORMAT_BC4_R8_UNORM =
+        GL_COMPRESSED_LUMINANCE_LATC1_EXT,  // 1-component, line through 1D space, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_BC5_R8G8_UNORM =
+        GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT,  // 2-component, two lines through 1D space, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_BC4_R8_SNORM =
+        GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,  // 1-component, line through 1D space, signed normalized
+    KS_GPU_TEXTURE_FORMAT_BC5_R8G8_SNORM =
+        GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT,  // 2-component, two lines through 1D space, signed normalized
+#endif
+
+//
+// ETC
+//
+#if defined(GL_COMPRESSED_RGB8_ETC2)
+    KS_GPU_TEXTURE_FORMAT_ETC2_R8G8B8_UNORM = GL_COMPRESSED_RGB8_ETC2,  // 3-component ETC2, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ETC2_R8G8B8A1_UNORM =
+        GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2,  // 3-component with 1-bit alpha ETC2, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ETC2_R8G8B8A8_UNORM = GL_COMPRESSED_RGBA8_ETC2_EAC,  // 4-component ETC2, unsigned normalized
+
+    KS_GPU_TEXTURE_FORMAT_ETC2_R8G8B8_SRGB = GL_COMPRESSED_SRGB8_ETC2,  // 3-component ETC2, sRGB
+    KS_GPU_TEXTURE_FORMAT_ETC2_R8G8B8A1_SRGB =
+        GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2,                                // 3-component with 1-bit alpha ETC2, sRGB
+    KS_GPU_TEXTURE_FORMAT_ETC2_R8G8B8A8_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,  // 4-component ETC2, sRGB
+#endif
+
+#if defined(GL_COMPRESSED_R11_EAC)
+    KS_GPU_TEXTURE_FORMAT_EAC_R11_UNORM = GL_COMPRESSED_R11_EAC,  // 1-component ETC, line through 1D space, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_EAC_R11G11_UNORM =
+        GL_COMPRESSED_RG11_EAC,  // 2-component ETC, two lines through 1D space, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_EAC_R11_SNORM =
+        GL_COMPRESSED_SIGNED_R11_EAC,  // 1-component ETC, line through 1D space, signed normalized
+    KS_GPU_TEXTURE_FORMAT_EAC_R11G11_SNORM =
+        GL_COMPRESSED_SIGNED_RG11_EAC,  // 2-component ETC, two lines through 1D space, signed normalized
+#endif
+
+//
+// ASTC
+//
+#if defined(GL_COMPRESSED_RGBA_ASTC_4x4_KHR)
+    KS_GPU_TEXTURE_FORMAT_ASTC_4x4_UNORM = GL_COMPRESSED_RGBA_ASTC_4x4_KHR,    // 4-component ASTC, 4x4 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_5x4_UNORM = GL_COMPRESSED_RGBA_ASTC_5x4_KHR,    // 4-component ASTC, 5x4 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_5x5_UNORM = GL_COMPRESSED_RGBA_ASTC_5x5_KHR,    // 4-component ASTC, 5x5 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_6x5_UNORM = GL_COMPRESSED_RGBA_ASTC_6x5_KHR,    // 4-component ASTC, 6x5 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_6x6_UNORM = GL_COMPRESSED_RGBA_ASTC_6x6_KHR,    // 4-component ASTC, 6x6 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_8x5_UNORM = GL_COMPRESSED_RGBA_ASTC_8x5_KHR,    // 4-component ASTC, 8x5 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_8x6_UNORM = GL_COMPRESSED_RGBA_ASTC_8x6_KHR,    // 4-component ASTC, 8x6 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_8x8_UNORM = GL_COMPRESSED_RGBA_ASTC_8x8_KHR,    // 4-component ASTC, 8x8 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x5_UNORM = GL_COMPRESSED_RGBA_ASTC_10x5_KHR,  // 4-component ASTC, 10x5 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x6_UNORM = GL_COMPRESSED_RGBA_ASTC_10x6_KHR,  // 4-component ASTC, 10x6 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x8_UNORM = GL_COMPRESSED_RGBA_ASTC_10x8_KHR,  // 4-component ASTC, 10x8 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x10_UNORM =
+        GL_COMPRESSED_RGBA_ASTC_10x10_KHR,  // 4-component ASTC, 10x10 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_12x10_UNORM =
+        GL_COMPRESSED_RGBA_ASTC_12x10_KHR,  // 4-component ASTC, 12x10 blocks, unsigned normalized
+    KS_GPU_TEXTURE_FORMAT_ASTC_12x12_UNORM =
+        GL_COMPRESSED_RGBA_ASTC_12x12_KHR,  // 4-component ASTC, 12x12 blocks, unsigned normalized
+
+    KS_GPU_TEXTURE_FORMAT_ASTC_4x4_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR,      // 4-component ASTC, 4x4 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_5x4_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR,      // 4-component ASTC, 5x4 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_5x5_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR,      // 4-component ASTC, 5x5 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_6x5_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR,      // 4-component ASTC, 6x5 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_6x6_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR,      // 4-component ASTC, 6x6 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_8x5_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR,      // 4-component ASTC, 8x5 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_8x6_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR,      // 4-component ASTC, 8x6 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_8x8_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR,      // 4-component ASTC, 8x8 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x5_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR,    // 4-component ASTC, 10x5 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x6_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR,    // 4-component ASTC, 10x6 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x8_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR,    // 4-component ASTC, 10x8 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_10x10_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR,  // 4-component ASTC, 10x10 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_12x10_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR,  // 4-component ASTC, 12x10 blocks, sRGB
+    KS_GPU_TEXTURE_FORMAT_ASTC_12x12_SRGB = GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR,  // 4-component ASTC, 12x12 blocks, sRGB
+#endif
+} ksGpuTextureFormat;
+
+typedef enum {
+    KS_GPU_TEXTURE_USAGE_UNDEFINED = BIT(0),
+    KS_GPU_TEXTURE_USAGE_GENERAL = BIT(1),
+    KS_GPU_TEXTURE_USAGE_TRANSFER_SRC = BIT(2),
+    KS_GPU_TEXTURE_USAGE_TRANSFER_DST = BIT(3),
+    KS_GPU_TEXTURE_USAGE_SAMPLED = BIT(4),
+    KS_GPU_TEXTURE_USAGE_STORAGE = BIT(5),
+    KS_GPU_TEXTURE_USAGE_COLOR_ATTACHMENT = BIT(6),
+    KS_GPU_TEXTURE_USAGE_PRESENTATION = BIT(7)
+} ksGpuTextureUsage;
+
+typedef unsigned int ksGpuTextureUsageFlags;
+
+typedef enum {
+    KS_GPU_TEXTURE_WRAP_MODE_REPEAT,
+    KS_GPU_TEXTURE_WRAP_MODE_CLAMP_TO_EDGE,
+    KS_GPU_TEXTURE_WRAP_MODE_CLAMP_TO_BORDER
+} ksGpuTextureWrapMode;
+
+typedef enum { KS_GPU_TEXTURE_FILTER_NEAREST, KS_GPU_TEXTURE_FILTER_LINEAR, KS_GPU_TEXTURE_FILTER_BILINEAR } ksGpuTextureFilter;
+
+typedef enum {
+    KS_GPU_TEXTURE_DEFAULT_CHECKERBOARD,  // 32x32 checkerboard pattern (KS_GPU_TEXTURE_FORMAT_R8G8B8A8_UNORM)
+    KS_GPU_TEXTURE_DEFAULT_PYRAMIDS,      // 32x32 block pattern of pyramids (KS_GPU_TEXTURE_FORMAT_R8G8B8A8_UNORM)
+    KS_GPU_TEXTURE_DEFAULT_CIRCLES        // 32x32 block pattern with circles (KS_GPU_TEXTURE_FORMAT_R8G8B8A8_UNORM)
+} ksGpuTextureDefault;
+
+typedef struct {
+    int width;
+    int height;
+    int depth;
+    int layerCount;
+    int mipCount;
+    ksGpuSampleCount sampleCount;
+    ksGpuTextureUsage usage;
+    ksGpuTextureUsageFlags usageFlags;
+    ksGpuTextureWrapMode wrapMode;
+    ksGpuTextureFilter filter;
+    float maxAnisotropy;
+    GLenum format;
+    GLuint target;
+    GLuint texture;
+} ksGpuTexture;
+
+bool ksGpuTexture_Create2D(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureFormat format,
+                           const ksGpuSampleCount sampleCount, const int width, const int height, const int mipCount,
+                           const ksGpuTextureUsageFlags usageFlags, const void *data, const size_t dataSize);
+bool ksGpuTexture_Create2DArray(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureFormat format,
+                                const ksGpuSampleCount sampleCount, const int width, const int height, const int layerCount,
+                                const int mipCount, const ksGpuTextureUsageFlags usageFlags, const void *data,
+                                const size_t dataSize);
+bool ksGpuTexture_CreateDefault(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureDefault defaultType,
+                                const int width, const int height, const int depth, const int layerCount, const int faceCount,
+                                const bool mipmaps, const bool border);
+bool ksGpuTexture_CreateFromSwapchain(ksGpuContext *context, ksGpuTexture *texture, const ksGpuWindow *window, int index);
+bool ksGpuTexture_CreateFromFile(ksGpuContext *context, ksGpuTexture *texture, const char *fileName);
+void ksGpuTexture_Destroy(ksGpuContext *context, ksGpuTexture *texture);
+
+void ksGpuTexture_SetFilter(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureFilter filter);
+void ksGpuTexture_SetAniso(ksGpuContext *context, ksGpuTexture *texture, const float maxAniso);
+void ksGpuTexture_SetWrapMode(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureWrapMode wrapMode);
+
+/*
+================================================================================================================================
+
+GPU indices and vertex attributes.
+
+ksGpuTriangleIndex
+ksGpuTriangleIndexArray
+ksGpuVertexAttribute
+ksGpuVertexAttributeArrays
+
+================================================================================================================================
+*/
+
+typedef unsigned short ksGpuTriangleIndex;
+
+typedef struct {
+    const ksGpuBuffer *buffer;
+    ksGpuTriangleIndex *indexArray;
+    int indexCount;
+} ksGpuTriangleIndexArray;
+
+typedef enum {
+    KS_GPU_ATTRIBUTE_FORMAT_R32_SFLOAT = (1 << 16) | GL_FLOAT,
+    KS_GPU_ATTRIBUTE_FORMAT_R32G32_SFLOAT = (2 << 16) | GL_FLOAT,
+    KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT = (3 << 16) | GL_FLOAT,
+    KS_GPU_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT = (4 << 16) | GL_FLOAT
+} ksGpuAttributeFormat;
+
+typedef struct {
+    int attributeFlag;                     // VERTEX_ATTRIBUTE_FLAG_
+    size_t attributeOffset;                // Offset in bytes to the pointer in ksGpuVertexAttributeArrays
+    size_t attributeSize;                  // Size in bytes of a single attribute
+    ksGpuAttributeFormat attributeFormat;  // Format of the attribute
+    int locationCount;                     // Number of attribute locations
+    const char *name;                      // Name in vertex program
+} ksGpuVertexAttribute;
+
+typedef struct {
+    const ksGpuBuffer *buffer;
+    const ksGpuVertexAttribute *layout;
+    void *data;
+    size_t dataSize;
+    int vertexCount;
+    int attribsFlags;
+} ksGpuVertexAttributeArrays;
+
+/*
+================================================================================================================================
+
+GPU default vertex attribute layout.
+
+ksDefaultVertexAttributeFlags
+ksDefaultVertexAttributeArrays
+
+================================================================================================================================
+*/
+
+typedef enum {
+    VERTEX_ATTRIBUTE_FLAG_POSITION = BIT(0),       // vec3 vertexPosition
+    VERTEX_ATTRIBUTE_FLAG_NORMAL = BIT(1),         // vec3 vertexNormal
+    VERTEX_ATTRIBUTE_FLAG_TANGENT = BIT(2),        // vec3 vertexTangent
+    VERTEX_ATTRIBUTE_FLAG_BINORMAL = BIT(3),       // vec3 vertexBinormal
+    VERTEX_ATTRIBUTE_FLAG_COLOR = BIT(4),          // vec4 vertexColor
+    VERTEX_ATTRIBUTE_FLAG_UV0 = BIT(5),            // vec2 vertexUv0
+    VERTEX_ATTRIBUTE_FLAG_UV1 = BIT(6),            // vec2 vertexUv1
+    VERTEX_ATTRIBUTE_FLAG_UV2 = BIT(7),            // vec2 vertexUv2
+    VERTEX_ATTRIBUTE_FLAG_JOINT_INDICES = BIT(8),  // vec4 jointIndices
+    VERTEX_ATTRIBUTE_FLAG_JOINT_WEIGHTS = BIT(9),  // vec4 jointWeights
+    VERTEX_ATTRIBUTE_FLAG_TRANSFORM = BIT(10)      // mat4 vertexTransform (NOTE this mat4 takes up 4 attribute locations)
+} ksDefaultVertexAttributeFlags;
+
+typedef struct {
+    ksGpuVertexAttributeArrays base;
+    ksVector3f *position;
+    ksVector3f *normal;
+    ksVector3f *tangent;
+    ksVector3f *binormal;
+    ksVector4f *color;
+    ksVector2f *uv0;
+    ksVector2f *uv1;
+    ksVector2f *uv2;
+    ksVector4f *jointIndices;
+    ksVector4f *jointWeights;
+    ksMatrix4x4f *transform;
+} ksDefaultVertexAttributeArrays;
+
+static const ksGpuVertexAttribute ksDefaultVertexAttributeLayout[] = {
+    {VERTEX_ATTRIBUTE_FLAG_POSITION, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, position),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, position[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, 1, "vertexPosition"},
+    {VERTEX_ATTRIBUTE_FLAG_NORMAL, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, normal),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, normal[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, 1, "vertexNormal"},
+    {VERTEX_ATTRIBUTE_FLAG_TANGENT, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, tangent),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, tangent[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, 1, "vertexTangent"},
+    {VERTEX_ATTRIBUTE_FLAG_BINORMAL, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, binormal),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, binormal[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, 1, "vertexBinormal"},
+    {VERTEX_ATTRIBUTE_FLAG_COLOR, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, color),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, color[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT, 1, "vertexColor"},
+    {VERTEX_ATTRIBUTE_FLAG_UV0, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, uv0),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, uv0[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32_SFLOAT, 1, "vertexUv0"},
+    {VERTEX_ATTRIBUTE_FLAG_UV1, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, uv1),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, uv1[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32_SFLOAT, 1, "vertexUv1"},
+    {VERTEX_ATTRIBUTE_FLAG_UV2, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, uv2),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, uv2[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32_SFLOAT, 1, "vertexUv2"},
+    {VERTEX_ATTRIBUTE_FLAG_JOINT_INDICES, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, jointIndices),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, jointIndices[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT, 1,
+     "vertexJointIndices"},
+    {VERTEX_ATTRIBUTE_FLAG_JOINT_WEIGHTS, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, jointWeights),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, jointWeights[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT, 1,
+     "vertexJointWeights"},
+    {VERTEX_ATTRIBUTE_FLAG_TRANSFORM, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, transform),
+     SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, transform[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32A32_SFLOAT, 4,
+     "vertexTransform"},
+    {0, 0, 0, 0, 0, ""}};
+
+/*
+================================================================================================================================
+
+GPU geometry.
+
+For optimal performance geometry should only be created at load time, not at runtime.
+The vertex attributes are not packed. Each attribute is stored in a separate array for
+optimal binning on tiling GPUs that only transform the vertex position for the binning pass.
+Storing each attribute in a saparate array is preferred even on immediate-mode GPUs to avoid
+wasting cache space for attributes that are not used by a particular vertex shader.
+
+ksGpuGeometry
+
+void ksGpuGeometry_Create( ksGpuContext * context, ksGpuGeometry * geometry,
+                                                                const ksGpuVertexAttributeArrays * attribs,
+                                                                const ksGpuTriangleIndexArray * indices );
+void ksGpuGeometry_CreateQuad( ksGpuContext * context, ksGpuGeometry * geometry, const float offset, const float scale );
+void ksGpuGeometry_CreateCube( ksGpuContext * context, ksGpuGeometry * geometry, const float offset, const float scale );
+void ksGpuGeometry_CreateTorus( ksGpuContext * context, ksGpuGeometry * geometry, const int tesselation, const float offset,
+const float scale );
+
+void ksGpuGeometry_Destroy( ksGpuContext * context, ksGpuGeometry * geometry );
+
+void ksGpuGeometry_AddInstanceAttributes( ksGpuContext * context, ksGpuGeometry * geometry, const int numInstances, const int
+instanceAttribsFlags );
+
+================================================================================================================================
+*/
+
+typedef struct {
+    const ksGpuVertexAttribute *layout;
+    int vertexAttribsFlags;
+    int instanceAttribsFlags;
+    int vertexCount;
+    int instanceCount;
+    int indexCount;
+    ksGpuBuffer vertexBuffer;
+    ksGpuBuffer instanceBuffer;
+    ksGpuBuffer indexBuffer;
+} ksGpuGeometry;
+
+void ksGpuGeometry_Create(ksGpuContext *context, ksGpuGeometry *geometry, const ksGpuVertexAttributeArrays *attribs,
+                          const ksGpuTriangleIndexArray *indices);
+void ksGpuGeometry_CreateQuad(ksGpuContext *context, ksGpuGeometry *geometry, const float offset, const float scale);
+void ksGpuGeometry_CreateCube(ksGpuContext *context, ksGpuGeometry *geometry, const float offset, const float scale);
+void ksGpuGeometry_CreateTorus(ksGpuContext *context, ksGpuGeometry *geometry, const int tesselation, const float offset,
+                               const float scale);
+
+void ksGpuGeometry_Destroy(ksGpuContext *context, ksGpuGeometry *geometry);
+
+void ksGpuGeometry_AddInstanceAttributes(ksGpuContext *context, ksGpuGeometry *geometry, const int numInstances,
+                                         const int instanceAttribsFlags);
+
+/*
+================================================================================================================================
+
+GPU render pass.
+
+A render pass encapsulates a sequence of graphics commands that can be executed in a single tiling pass.
+For optimal performance a render pass should only be created at load time, not at runtime.
+Render passes cannot overlap and cannot be nested.
+
+ksGpuRenderPassType
+ksGpuRenderPassFlags
+ksGpuRenderPass
+
+static bool ksGpuRenderPass_Create( ksGpuContext * context, ksGpuRenderPass * renderPass,
+                                                                        const ksGpuSurfaceColorFormat colorFormat, const
+ksGpuSurfaceDepthFormat depthFormat, const ksGpuSampleCount sampleCount, const ksGpuRenderPassType type, const uint32_t flags );
+static void ksGpuRenderPass_Destroy( ksGpuContext * context, ksGpuRenderPass * renderPass );
+
+================================================================================================================================
+*/
+
+typedef enum { KS_GPU_RENDERPASS_TYPE_INLINE, KS_GPU_RENDERPASS_TYPE_SECONDARY_COMMAND_BUFFERS } ksGpuRenderPassType;
+
+typedef enum {
+    KS_GPU_RENDERPASS_FLAG_CLEAR_COLOR_BUFFER = BIT(0),
+    KS_GPU_RENDERPASS_FLAG_CLEAR_DEPTH_BUFFER = BIT(1)
+} ksGpuRenderPassFlags;
+
+typedef struct {
+    ksGpuRenderPassType type;
+    int flags;
+    ksGpuSurfaceColorFormat colorFormat;
+    ksGpuSurfaceDepthFormat depthFormat;
+    ksGpuSampleCount sampleCount;
+} ksGpuRenderPass;
+
+bool ksGpuRenderPass_Create(ksGpuContext *context, ksGpuRenderPass *renderPass, const ksGpuSurfaceColorFormat colorFormat,
+                            const ksGpuSurfaceDepthFormat depthFormat, const ksGpuSampleCount sampleCount,
+                            const ksGpuRenderPassType type, const int flags);
+
+void ksGpuRenderPass_Destroy(ksGpuContext *context, ksGpuRenderPass *renderPass);
+
+/*
+================================================================================================================================
+
+GPU framebuffer.
+
+A framebuffer encapsulates either a swapchain or a buffered set of textures.
+For optimal performance a framebuffer should only be created at load time, not at runtime.
+
+ksGpuFramebuffer
+
+bool ksGpuFramebuffer_CreateFromSwapchain(ksGpuWindow *window, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass);
+
+bool ksGpuFramebuffer_CreateFromTextures(ksGpuContext *context, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass,
+                                         const int width, const int height, const int numBuffers);
+
+bool ksGpuFramebuffer_CreateFromTextureArrays(ksGpuContext *context, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass,
+                                              const int width, const int height, const int numLayers, const int numBuffers,
+                                              const bool multiview);
+
+void ksGpuFramebuffer_Destroy(ksGpuContext *context, ksGpuFramebuffer *framebuffer);
+
+int ksGpuFramebuffer_GetWidth(const ksGpuFramebuffer *framebuffer);
+int ksGpuFramebuffer_GetHeight(const ksGpuFramebuffer *framebuffer);
+ksScreenRect ksGpuFramebuffer_GetRect(const ksGpuFramebuffer *framebuffer);
+int ksGpuFramebuffer_GetBufferCount(const ksGpuFramebuffer *framebuffer);
+ksGpuTexture *ksGpuFramebuffer_GetColorTexture(const ksGpuFramebuffer *framebuffer);
+
+================================================================================================================================
+*/
+
+typedef struct {
+    ksGpuTexture *colorTextures;
+    GLuint renderTexture;
+    GLuint depthBuffer;
+    GLuint *renderBuffers;
+    GLuint *resolveBuffers;
+    bool multiView;
+    int sampleCount;
+    int numFramebuffersPerTexture;
+    int numBuffers;
+    int currentBuffer;
+} ksGpuFramebuffer;
+
+typedef enum { MSAA_OFF, MSAA_RESOLVE, MSAA_BLIT } ksGpuMsaaMode;
+
+bool ksGpuFramebuffer_CreateFromSwapchain(ksGpuWindow *window, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass);
+
+bool ksGpuFramebuffer_CreateFromTextures(ksGpuContext *context, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass,
+                                         const int width, const int height, const int numBuffers);
+
+bool ksGpuFramebuffer_CreateFromTextureArrays(ksGpuContext *context, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass,
+                                              const int width, const int height, const int numLayers, const int numBuffers,
+                                              const bool multiview);
+
+void ksGpuFramebuffer_Destroy(ksGpuContext *context, ksGpuFramebuffer *framebuffer);
+
+int ksGpuFramebuffer_GetWidth(const ksGpuFramebuffer *framebuffer);
+int ksGpuFramebuffer_GetHeight(const ksGpuFramebuffer *framebuffer);
+ksScreenRect ksGpuFramebuffer_GetRect(const ksGpuFramebuffer *framebuffer);
+int ksGpuFramebuffer_GetBufferCount(const ksGpuFramebuffer *framebuffer);
+ksGpuTexture *ksGpuFramebuffer_GetColorTexture(const ksGpuFramebuffer *framebuffer);
 
 #ifdef __cplusplus
 }

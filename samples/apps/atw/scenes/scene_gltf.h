@@ -3275,9 +3275,9 @@ static bool ksGltfScene_CreateFromFile(ksGpuContext *context, ksGltfScene *scene
             //
 
             scene->techniques[techniqueIndex].vertexAttributeLayout =
-                (ksGpuVertexAttribute *)malloc(sizeof(DefaultVertexAttributeLayout));
-            memcpy(scene->techniques[techniqueIndex].vertexAttributeLayout, DefaultVertexAttributeLayout,
-                   sizeof(DefaultVertexAttributeLayout));
+                (ksGpuVertexAttribute *)malloc(sizeof(ksDefaultVertexAttributeLayout));
+            memcpy(scene->techniques[techniqueIndex].vertexAttributeLayout, ksDefaultVertexAttributeLayout,
+                   sizeof(ksDefaultVertexAttributeLayout));
 
             int vertexAttribsFlags = 0;
             const ksJson *attributes = ksJson_GetMemberByName(technique, "attributes");

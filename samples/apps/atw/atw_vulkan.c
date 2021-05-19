@@ -7317,7 +7317,7 @@ typedef struct {
     ksMatrix4x4f *transform;
 } ksDefaultVertexAttributeArrays;
 
-static const ksGpuVertexAttribute DefaultVertexAttributeLayout[] = {
+static const ksGpuVertexAttribute ksDefaultVertexAttributeLayout[] = {
     {VERTEX_ATTRIBUTE_FLAG_POSITION, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, position),
      SIZEOF_MEMBER(ksDefaultVertexAttributeArrays, position[0]), KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT, 1, "vertexPosition"},
     {VERTEX_ATTRIBUTE_FLAG_NORMAL, OFFSETOF_MEMBER(ksDefaultVertexAttributeArrays, normal),
@@ -7418,7 +7418,7 @@ static void ksGpuGeometry_CreateQuad(ksGpuContext *context, ksGpuGeometry *geome
     const ksGpuTriangleIndex quadIndices[6] = {0, 1, 2, 2, 3, 0};
 
     ksDefaultVertexAttributeArrays quadAttributeArrays;
-    ksGpuVertexAttributeArrays_Alloc(&quadAttributeArrays.base, DefaultVertexAttributeLayout, 4,
+    ksGpuVertexAttributeArrays_Alloc(&quadAttributeArrays.base, ksDefaultVertexAttributeLayout, 4,
                                      VERTEX_ATTRIBUTE_FLAG_POSITION | VERTEX_ATTRIBUTE_FLAG_NORMAL | VERTEX_ATTRIBUTE_FLAG_TANGENT |
                                          VERTEX_ATTRIBUTE_FLAG_BINORMAL | VERTEX_ATTRIBUTE_FLAG_UV0);
 
@@ -7477,7 +7477,7 @@ static void ksGpuGeometry_CreateCube(ksGpuContext *context, ksGpuGeometry *geome
                                                 12, 14, 13, 14, 12, 15, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20};
 
     ksDefaultVertexAttributeArrays cubeAttributeArrays;
-    ksGpuVertexAttributeArrays_Alloc(&cubeAttributeArrays.base, DefaultVertexAttributeLayout, 24,
+    ksGpuVertexAttributeArrays_Alloc(&cubeAttributeArrays.base, ksDefaultVertexAttributeLayout, 24,
                                      VERTEX_ATTRIBUTE_FLAG_POSITION | VERTEX_ATTRIBUTE_FLAG_NORMAL | VERTEX_ATTRIBUTE_FLAG_TANGENT |
                                          VERTEX_ATTRIBUTE_FLAG_BINORMAL | VERTEX_ATTRIBUTE_FLAG_UV0);
 
@@ -7514,7 +7514,7 @@ static void ksGpuGeometry_CreateTorus(ksGpuContext *context, ksGpuGeometry *geom
     const int indexCount = majorTesselation * minorTesselation * 6;
 
     ksDefaultVertexAttributeArrays torusAttributeArrays;
-    ksGpuVertexAttributeArrays_Alloc(&torusAttributeArrays.base, DefaultVertexAttributeLayout, vertexCount,
+    ksGpuVertexAttributeArrays_Alloc(&torusAttributeArrays.base, ksDefaultVertexAttributeLayout, vertexCount,
                                      VERTEX_ATTRIBUTE_FLAG_POSITION | VERTEX_ATTRIBUTE_FLAG_NORMAL | VERTEX_ATTRIBUTE_FLAG_TANGENT |
                                          VERTEX_ATTRIBUTE_FLAG_BINORMAL | VERTEX_ATTRIBUTE_FLAG_UV0);
 
@@ -8225,10 +8225,10 @@ typedef struct {
     const ksGpuProgramParm *parms;
     VkDescriptorSetLayout descriptorSetLayout;
     VkPipelineLayout pipelineLayout;
-    int offsetForIndex[MAX_PROGRAM_PARMS];                     // push constant offsets into ksGpuProgramParmState::data based on
+    int offsetForIndex[KS_MAX_PROGRAM_PARMS];                     // push constant offsets into ksGpuProgramParmState::data based on
                                                                // ksGpuProgramParm::index
-    const ksGpuProgramParm *bindings[MAX_PROGRAM_PARMS];       // descriptor bindings
-    const ksGpuProgramParm *pushConstants[MAX_PROGRAM_PARMS];  // push constants
+    const ksGpuProgramParm *bindings[KS_MAX_PROGRAM_PARMS];       // descriptor bindings
+    const ksGpuProgramParm *pushConstants[KS_MAX_PROGRAM_PARMS];  // push constants
     int numBindings;
     int numPushConstants;
     unsigned int hash;
@@ -8323,7 +8323,7 @@ static void ksGpuProgramParmLayout_Create(ksGpuContext *context, ksGpuProgramPar
                 }
             }
 
-            assert(parms[i].binding >= 0 && parms[i].binding < MAX_PROGRAM_PARMS);
+            assert(parms[i].binding >= 0 && parms[i].binding < KS_MAX_PROGRAM_PARMS);
 
             // Make sure each binding location is only used once.
             assert(layout->bindings[parms[i].binding] == NULL);
@@ -8333,7 +8333,7 @@ static void ksGpuProgramParmLayout_Create(ksGpuContext *context, ksGpuProgramPar
                 layout->numBindings = (int)parms[i].binding + 1;
             }
         } else {
-            assert(layout->numPushConstants < MAX_PROGRAM_PARMS);
+            assert(layout->numPushConstants < KS_MAX_PROGRAM_PARMS);
             layout->pushConstants[layout->numPushConstants++] = &parms[i];
 
             layout->offsetForIndex[parms[i].index] = offset;
@@ -8393,8 +8393,8 @@ static void ksGpuProgramParmLayout_Create(ksGpuContext *context, ksGpuProgramPar
     //
 
     {
-        VkDescriptorSetLayoutBinding descriptorSetBindings[MAX_PROGRAM_PARMS];
-        VkPushConstantRange pushConstantRanges[MAX_PROGRAM_PARMS];
+        VkDescriptorSetLayoutBinding descriptorSetBindings[KS_MAX_PROGRAM_PARMS];
+        VkPushConstantRange pushConstantRanges[KS_MAX_PROGRAM_PARMS];
 
         int numDescriptorSetBindings = 0;
         int numPushConstantRanges = 0;
@@ -9094,7 +9094,7 @@ ksGpuProgramParmState
 #define MAX_SAVED_PUSH_CONSTANT_BYTES 512
 
 typedef struct {
-    const void *parms[MAX_PROGRAM_PARMS];
+    const void *parms[KS_MAX_PROGRAM_PARMS];
 #if SAVE_PUSH_CONSTANT_STATE == 1
     unsigned char data[MAX_SAVED_PUSH_CONSTANT_BYTES];
 #endif
@@ -9102,7 +9102,7 @@ typedef struct {
 
 static void ksGpuProgramParmState_SetParm(ksGpuProgramParmState *parmState, const ksGpuProgramParmLayout *parmLayout,
                                           const int index, const ksGpuProgramParmType parmType, const void *pointer) {
-    assert(index >= 0 && index < MAX_PROGRAM_PARMS);
+    assert(index >= 0 && index < KS_MAX_PROGRAM_PARMS);
     if (pointer != NULL) {
         bool found = false;
         for (int i = 0; i < parmLayout->numParms; i++) {
@@ -9572,7 +9572,7 @@ static void ksGpuPipelineResources_Create(ksGpuContext *context, ksGpuPipelineRe
     //
 
     {
-        VkDescriptorPoolSize typeCounts[MAX_PROGRAM_PARMS];
+        VkDescriptorPoolSize typeCounts[KS_MAX_PROGRAM_PARMS];
 
         int count = 0;
         for (int i = 0; i < parmLayout->numBindings; i++) {
@@ -9623,9 +9623,9 @@ static void ksGpuPipelineResources_Create(ksGpuContext *context, ksGpuPipelineRe
         VK(context->device->vkAllocateDescriptorSets(context->device->device, &descriptorSetAllocateInfo,
                                                      &resources->descriptorSet));
 
-        VkWriteDescriptorSet writes[MAX_PROGRAM_PARMS] = {{0}};
-        VkDescriptorImageInfo imageInfo[MAX_PROGRAM_PARMS] = {{0}};
-        VkDescriptorBufferInfo bufferInfo[MAX_PROGRAM_PARMS] = {{0}};
+        VkWriteDescriptorSet writes[KS_MAX_PROGRAM_PARMS] = {{0}};
+        VkDescriptorImageInfo imageInfo[KS_MAX_PROGRAM_PARMS] = {{0}};
+        VkDescriptorBufferInfo bufferInfo[KS_MAX_PROGRAM_PARMS] = {{0}};
 
         int numWrites = 0;
         for (int i = 0; i < parmLayout->numBindings; i++) {
@@ -12069,7 +12069,7 @@ static void ksTimeWarpGraphics_Create(ksGpuContext *context, ksTimeWarpGraphics 
 
     ksDefaultVertexAttributeArrays vertexAttribs;
     ksGpuVertexAttributeArrays_Alloc(
-        &vertexAttribs.base, DefaultVertexAttributeLayout, vertexCount,
+        &vertexAttribs.base, ksDefaultVertexAttributeLayout, vertexCount,
         VERTEX_ATTRIBUTE_FLAG_POSITION | VERTEX_ATTRIBUTE_FLAG_UV0 | VERTEX_ATTRIBUTE_FLAG_UV1 | VERTEX_ATTRIBUTE_FLAG_UV2);
 
     const int numMeshCoords = (hmdInfo->eyeTilesWide + 1) * (hmdInfo->eyeTilesHigh + 1);

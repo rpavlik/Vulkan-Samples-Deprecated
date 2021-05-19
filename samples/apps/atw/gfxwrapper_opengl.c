@@ -4459,3 +4459,2150 @@ ksNanoseconds ksGpuTimer_GetNanoseconds(ksGpuTimer *timer) {
         return 0;
     }
 }
+
+bool ksGpuBuffer_Create(ksGpuContext *context, ksGpuBuffer *buffer, const ksGpuBufferType type, const size_t dataSize,
+                        const void *data, const bool hostVisible) {
+    UNUSED_PARM(context);
+    UNUSED_PARM(hostVisible);
+
+    buffer->target = ((type == KS_GPU_BUFFER_TYPE_VERTEX)
+                          ? GL_ARRAY_BUFFER
+                          : ((type == KS_GPU_BUFFER_TYPE_INDEX)
+                                 ? GL_ELEMENT_ARRAY_BUFFER
+                                 : ((type == KS_GPU_BUFFER_TYPE_UNIFORM)
+                                        ? GL_UNIFORM_BUFFER
+                                        : ((type == KS_GPU_BUFFER_TYPE_STORAGE) ? GL_SHADER_STORAGE_BUFFER : 0))));
+    buffer->size = dataSize;
+
+    GL(glGenBuffers(1, &buffer->buffer));
+    GL(glBindBuffer(buffer->target, buffer->buffer));
+    GL(glBufferData(buffer->target, dataSize, data, GL_STATIC_DRAW));
+    GL(glBindBuffer(buffer->target, 0));
+
+    buffer->owner = true;
+
+    return true;
+}
+
+void ksGpuBuffer_CreateReference(ksGpuContext *context, ksGpuBuffer *buffer, const ksGpuBuffer *other) {
+    UNUSED_PARM(context);
+
+    buffer->target = other->target;
+    buffer->size = other->size;
+    buffer->buffer = other->buffer;
+    buffer->owner = false;
+}
+
+void ksGpuBuffer_Destroy(ksGpuContext *context, ksGpuBuffer *buffer) {
+    UNUSED_PARM(context);
+
+    if (buffer->owner) {
+        GL(glDeleteBuffers(1, &buffer->buffer));
+    }
+    memset(buffer, 0, sizeof(ksGpuBuffer));
+}
+
+static int IntegerLog2(int i) {
+    int r = 0;
+    int t;
+    t = ((~((i >> 16) + ~0U)) >> 27) & 0x10;
+    r |= t;
+    i >>= t;
+    t = ((~((i >> 8) + ~0U)) >> 28) & 0x08;
+    r |= t;
+    i >>= t;
+    t = ((~((i >> 4) + ~0U)) >> 29) & 0x04;
+    r |= t;
+    i >>= t;
+    t = ((~((i >> 2) + ~0U)) >> 30) & 0x02;
+    r |= t;
+    i >>= t;
+    return (r | (i >> 1));
+}
+
+// 'width' must be >= 1 and <= 32768.
+// 'height' must be >= 1 and <= 32768.
+// 'depth' must be >= 0 and <= 32768.
+// 'layerCount' must be >= 0.
+// 'faceCount' must be either 1 or 6.
+// 'mipCount' must be -1 or >= 1.
+// 'mipCount' includes the finest level.
+// 'mipCount' set to -1 will allocate the full mip chain.
+// 'data' may be NULL to allocate a texture without initialization.
+// 'dataSize' is the full data size in bytes.
+// The 'data' is expected to be stored packed on a per mip level basis.
+// If 'data' != NULL and 'mipCount' <= 0, then the full mip chain will be generated from the finest data level.
+static bool ksGpuTexture_CreateInternal(ksGpuContext *context, ksGpuTexture *texture, const char *fileName,
+                                        const GLenum glInternalFormat, const ksGpuSampleCount sampleCount, const int width,
+                                        const int height, const int depth, const int layerCount, const int faceCount,
+                                        const int mipCount, const ksGpuTextureUsageFlags usageFlags, const void *data,
+                                        const size_t dataSize, const bool mipSizeStored) {
+    UNUSED_PARM(context);
+
+    memset(texture, 0, sizeof(ksGpuTexture));
+
+    assert(depth >= 0);
+    assert(layerCount >= 0);
+    assert(faceCount == 1 || faceCount == 6);
+
+    if (width < 1 || width > 32768 || height < 1 || height > 32768 || depth < 0 || depth > 32768) {
+        Error("%s: Invalid texture size (%dx%dx%d)", fileName, width, height, depth);
+        return false;
+    }
+
+    if (faceCount != 1 && faceCount != 6) {
+        Error("%s: Cube maps must have 6 faces (%d)", fileName, faceCount);
+        return false;
+    }
+
+    if (faceCount == 6 && width != height) {
+        Error("%s: Cube maps must be square (%dx%d)", fileName, width, height);
+        return false;
+    }
+
+    if (depth > 0 && layerCount > 0) {
+        Error("%s: 3D array textures not supported", fileName);
+        return false;
+    }
+
+    const int maxDimension = width > height ? (width > depth ? width : depth) : (height > depth ? height : depth);
+    const int maxMipLevels = (1 + IntegerLog2(maxDimension));
+
+    if (mipCount > maxMipLevels) {
+        Error("%s: Too many mip levels (%d > %d)", fileName, mipCount, maxMipLevels);
+        return false;
+    }
+
+    const GLenum glTarget =
+        ((depth > 0) ? GL_TEXTURE_3D
+                     : ((faceCount == 6) ? ((layerCount > 0) ? GL_TEXTURE_CUBE_MAP_ARRAY : GL_TEXTURE_CUBE_MAP)
+                                         : ((height > 0) ? ((layerCount > 0) ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D)
+                                                         : ((layerCount > 0) ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D))));
+
+    const int numStorageLevels = (mipCount >= 1) ? mipCount : maxMipLevels;
+
+    GL(glGenTextures(1, &texture->texture));
+    GL(glBindTexture(glTarget, texture->texture));
+    if (depth <= 0 && layerCount <= 0) {
+        if (sampleCount > KS_GPU_SAMPLE_COUNT_1) {
+            GL(glTexStorage2DMultisample(glTarget, sampleCount, glInternalFormat, width, height, GL_TRUE));
+        } else {
+            GL(glTexStorage2D(glTarget, numStorageLevels, glInternalFormat, width, height));
+        }
+    } else {
+        if (sampleCount > KS_GPU_SAMPLE_COUNT_1) {
+            GL(glTexStorage3DMultisample(glTarget, sampleCount, glInternalFormat, width, height, MAX(depth, 1) * MAX(layerCount, 1),
+                                         GL_TRUE));
+        } else {
+            GL(glTexStorage3D(glTarget, numStorageLevels, glInternalFormat, width, height, MAX(depth, 1) * MAX(layerCount, 1)));
+        }
+    }
+
+    texture->target = glTarget;
+    texture->format = glInternalFormat;
+    texture->width = width;
+    texture->height = height;
+    texture->depth = depth;
+    texture->layerCount = layerCount;
+    texture->mipCount = numStorageLevels;
+    texture->sampleCount = sampleCount;
+    texture->usage = KS_GPU_TEXTURE_USAGE_UNDEFINED;
+    texture->usageFlags = usageFlags;
+    texture->wrapMode = KS_GPU_TEXTURE_WRAP_MODE_REPEAT;
+    texture->filter = (numStorageLevels > 1) ? KS_GPU_TEXTURE_FILTER_BILINEAR : KS_GPU_TEXTURE_FILTER_LINEAR;
+    texture->maxAnisotropy = 1.0f;
+
+    if (data != NULL) {
+        assert(sampleCount == KS_GPU_SAMPLE_COUNT_1);
+
+        const int numDataLevels = (mipCount >= 1) ? mipCount : 1;
+        const unsigned char *levelData = (const unsigned char *)data;
+        const unsigned char *endOfBuffer = levelData + dataSize;
+        bool compressed = false;
+
+        for (int mipLevel = 0; mipLevel < numDataLevels; mipLevel++) {
+            const int mipWidth = (width >> mipLevel) >= 1 ? (width >> mipLevel) : 1;
+            const int mipHeight = (height >> mipLevel) >= 1 ? (height >> mipLevel) : 1;
+            const int mipDepth = (depth >> mipLevel) >= 1 ? (depth >> mipLevel) : 1;
+
+            size_t mipSize = 0;
+            GLenum glFormat = GL_RGBA;
+            GLenum glDataType = GL_UNSIGNED_BYTE;
+            switch (glInternalFormat) {
+                //
+                // 8 bits per component
+                //
+                case GL_R8: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned char);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+                case GL_RG8: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned char);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+                case GL_RGBA8: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned char);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+
+                case GL_R8_SNORM: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(char);
+                    glFormat = GL_RED;
+                    glDataType = GL_BYTE;
+                    break;
+                }
+                case GL_RG8_SNORM: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(char);
+                    glFormat = GL_RG;
+                    glDataType = GL_BYTE;
+                    break;
+                }
+                case GL_RGBA8_SNORM: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(char);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_BYTE;
+                    break;
+                }
+
+                case GL_R8UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned char);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+                case GL_RG8UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned char);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+                case GL_RGBA8UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned char);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+
+                case GL_R8I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(char);
+                    glFormat = GL_RED;
+                    glDataType = GL_BYTE;
+                    break;
+                }
+                case GL_RG8I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(char);
+                    glFormat = GL_RG;
+                    glDataType = GL_BYTE;
+                    break;
+                }
+                case GL_RGBA8I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(char);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_BYTE;
+                    break;
+                }
+
+                case GL_SR8_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned char);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+                case GL_SRG8_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned char);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+                case GL_SRGB8_ALPHA8: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned char);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+
+                //
+                // 16 bits per component
+                //
+#if defined(GL_R16)
+                case GL_R16: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned short);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+                case GL_RG16: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned short);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+                case GL_RGBA16: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned short);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+#elif defined(GL_R16_EXT)
+                case GL_R16_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned short);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+                case GL_RG16_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned short);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+                case GL_RGB16_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned short);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+#endif
+
+#if defined(GL_R16_SNORM)
+                case GL_R16_SNORM: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(short);
+                    glFormat = GL_RED;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+                case GL_RG16_SNORM: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(short);
+                    glFormat = GL_RG;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+                case GL_RGBA16_SNORM: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(short);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+#elif defined(GL_R16_SNORM_EXT)
+                case GL_R16_SNORM_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(short);
+                    glFormat = GL_RED;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+                case GL_RG16_SNORM_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(short);
+                    glFormat = GL_RG;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+                case GL_RGBA16_SNORM_EXT: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(short);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+#endif
+
+                case GL_R16UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned short);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+                case GL_RG16UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned short);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+                case GL_RGBA16UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned short);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_UNSIGNED_SHORT;
+                    break;
+                }
+
+                case GL_R16I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(short);
+                    glFormat = GL_RED;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+                case GL_RG16I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(short);
+                    glFormat = GL_RG;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+                case GL_RGBA16I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(short);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_SHORT;
+                    break;
+                }
+
+                case GL_R16F: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned short);
+                    glFormat = GL_RED;
+                    glDataType = GL_HALF_FLOAT;
+                    break;
+                }
+                case GL_RG16F: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned short);
+                    glFormat = GL_RG;
+                    glDataType = GL_HALF_FLOAT;
+                    break;
+                }
+                case GL_RGBA16F: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned short);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_HALF_FLOAT;
+                    break;
+                }
+
+                //
+                // 32 bits per component
+                //
+                case GL_R32UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned int);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_INT;
+                    break;
+                }
+                case GL_RG32UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned int);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_INT;
+                    break;
+                }
+                case GL_RGBA32UI: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned int);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_UNSIGNED_INT;
+                    break;
+                }
+
+                case GL_R32I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(int);
+                    glFormat = GL_RED;
+                    glDataType = GL_INT;
+                    break;
+                }
+                case GL_RG32I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(int);
+                    glFormat = GL_RG;
+                    glDataType = GL_INT;
+                    break;
+                }
+                case GL_RGBA32I: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(int);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_INT;
+                    break;
+                }
+
+                case GL_R32F: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(float);
+                    glFormat = GL_RED;
+                    glDataType = GL_FLOAT;
+                    break;
+                }
+                case GL_RG32F: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(float);
+                    glFormat = GL_RG;
+                    glDataType = GL_FLOAT;
+                    break;
+                }
+                case GL_RGBA32F: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(float);
+                    glFormat = GL_RGBA;
+                    glDataType = GL_FLOAT;
+                    break;
+                }
+
+                //
+                // S3TC/DXT/BC
+                //
+#if defined(GL_COMPRESSED_RGB_S3TC_DXT1_EXT)
+                case GL_COMPRESSED_RGB_S3TC_DXT1_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+#endif
+
+#if defined(GL_COMPRESSED_SRGB_S3TC_DXT1_EXT)
+                case GL_COMPRESSED_SRGB_S3TC_DXT1_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+#endif
+
+#if defined(GL_COMPRESSED_LUMINANCE_LATC1_EXT)
+                case GL_COMPRESSED_LUMINANCE_LATC1_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+
+                case GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+#endif
+
+                //
+                // ETC
+                //
+#if defined(GL_COMPRESSED_RGB8_ETC2)
+                case GL_COMPRESSED_RGB8_ETC2: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA8_ETC2_EAC: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+
+                case GL_COMPRESSED_SRGB8_ETC2: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+#endif
+
+#if defined(GL_COMPRESSED_R11_EAC)
+                case GL_COMPRESSED_R11_EAC: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RG11_EAC: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+
+                case GL_COMPRESSED_SIGNED_R11_EAC: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 8;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SIGNED_RG11_EAC: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+#endif
+
+                //
+                // ASTC
+                //
+#if defined(GL_COMPRESSED_RGBA_ASTC_4x4_KHR)
+                case GL_COMPRESSED_RGBA_ASTC_4x4_KHR: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_5x4_KHR: {
+                    mipSize = ((mipWidth + 4) / 5) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_5x5_KHR: {
+                    mipSize = ((mipWidth + 4) / 5) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_6x5_KHR: {
+                    mipSize = ((mipWidth + 5) / 6) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_6x6_KHR: {
+                    mipSize = ((mipWidth + 5) / 6) * ((mipHeight + 5) / 6) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_8x5_KHR: {
+                    mipSize = ((mipWidth + 7) / 8) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_8x6_KHR: {
+                    mipSize = ((mipWidth + 7) / 8) * ((mipHeight + 5) / 6) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_8x8_KHR: {
+                    mipSize = ((mipWidth + 7) / 8) * ((mipHeight + 7) / 8) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_10x5_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_10x6_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 5) / 6) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_10x8_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 7) / 8) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_10x10_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 9) / 10) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_12x10_KHR: {
+                    mipSize = ((mipWidth + 11) / 12) * ((mipHeight + 9) / 10) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_RGBA_ASTC_12x12_KHR: {
+                    mipSize = ((mipWidth + 11) / 12) * ((mipHeight + 11) / 12) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR: {
+                    mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR: {
+                    mipSize = ((mipWidth + 4) / 5) * ((mipHeight + 3) / 4) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR: {
+                    mipSize = ((mipWidth + 4) / 5) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR: {
+                    mipSize = ((mipWidth + 5) / 6) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR: {
+                    mipSize = ((mipWidth + 5) / 6) * ((mipHeight + 5) / 6) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR: {
+                    mipSize = ((mipWidth + 7) / 8) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR: {
+                    mipSize = ((mipWidth + 7) / 8) * ((mipHeight + 5) / 6) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR: {
+                    mipSize = ((mipWidth + 7) / 8) * ((mipHeight + 7) / 8) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 4) / 5) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 5) / 6) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 7) / 8) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR: {
+                    mipSize = ((mipWidth + 9) / 10) * ((mipHeight + 9) / 10) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR: {
+                    mipSize = ((mipWidth + 11) / 12) * ((mipHeight + 9) / 10) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+                case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR: {
+                    mipSize = ((mipWidth + 11) / 12) * ((mipHeight + 11) / 12) * mipDepth * 16;
+                    compressed = true;
+                    break;
+                }
+#endif
+                default: {
+                    Error("%s: Unsupported image format %d", fileName, glInternalFormat);
+                    GL(glBindTexture(glTarget, 0));
+                    return false;
+                }
+            }
+
+            if (layerCount > 0) {
+                mipSize = mipSize * layerCount * faceCount;
+            }
+
+            if (mipSizeStored) {
+                if (levelData + 4 > endOfBuffer) {
+                    Error("%s: Image data exceeds buffer size", fileName);
+                    GL(glBindTexture(glTarget, 0));
+                    return false;
+                }
+                mipSize = (size_t) * (const unsigned int *)levelData;
+                levelData += 4;
+            }
+
+            if (depth <= 0 && layerCount <= 0) {
+                for (int face = 0; face < faceCount; face++) {
+                    if (mipSize <= 0 || mipSize > (size_t)(endOfBuffer - levelData)) {
+                        Error("%s: Mip %d data exceeds buffer size (%lld > %lld)", fileName, mipLevel, (uint64_t)mipSize,
+                              (uint64_t)(endOfBuffer - levelData));
+                        GL(glBindTexture(glTarget, 0));
+                        return false;
+                    }
+
+                    const GLenum uploadTarget = (glTarget == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : GL_TEXTURE_2D;
+                    if (compressed) {
+                        GL(glCompressedTexSubImage2D(uploadTarget + face, mipLevel, 0, 0, mipWidth, mipHeight, glInternalFormat,
+                                                     (GLsizei)mipSize, levelData));
+                    } else {
+                        GL(glTexSubImage2D(uploadTarget + face, mipLevel, 0, 0, mipWidth, mipHeight, glFormat, glDataType,
+                                           levelData));
+                    }
+
+                    levelData += mipSize;
+
+                    if (mipSizeStored) {
+                        levelData += 3 - ((mipSize + 3) % 4);
+                        if (levelData > endOfBuffer) {
+                            Error("%s: Image data exceeds buffer size", fileName);
+                            GL(glBindTexture(glTarget, 0));
+                            return false;
+                        }
+                    }
+                }
+            } else {
+                if (mipSize <= 0 || mipSize > (size_t)(endOfBuffer - levelData)) {
+                    Error("%s: Mip %d data exceeds buffer size (%lld > %lld)", fileName, mipLevel, (uint64_t)mipSize,
+                          (uint64_t)(endOfBuffer - levelData));
+                    GL(glBindTexture(glTarget, 0));
+                    return false;
+                }
+
+                if (compressed) {
+                    GL(glCompressedTexSubImage3D(glTarget, mipLevel, 0, 0, 0, mipWidth, mipHeight, mipDepth * MAX(layerCount, 1),
+                                                 glInternalFormat, (GLsizei)mipSize, levelData));
+                } else {
+                    GL(glTexSubImage3D(glTarget, mipLevel, 0, 0, 0, mipWidth, mipHeight, mipDepth * MAX(layerCount, 1), glFormat,
+                                       glDataType, levelData));
+                }
+
+                levelData += mipSize;
+
+                if (mipSizeStored) {
+                    levelData += 3 - ((mipSize + 3) % 4);
+                    if (levelData > endOfBuffer) {
+                        Error("%s: Image data exceeds buffer size", fileName);
+                        GL(glBindTexture(glTarget, 0));
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (mipCount < 1) {
+            // Can ony generate mip levels for uncompressed textures.
+            assert(compressed == false);
+
+            GL(glGenerateMipmap(glTarget));
+        }
+    }
+
+    GL(glTexParameteri(glTarget, GL_TEXTURE_MIN_FILTER, (numStorageLevels > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR));
+    GL(glTexParameteri(glTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+
+    GL(glBindTexture(glTarget, 0));
+
+    texture->usage = KS_GPU_TEXTURE_USAGE_SAMPLED;
+
+    return true;
+}
+
+bool ksGpuTexture_Create2D(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureFormat format,
+                           const ksGpuSampleCount sampleCount, const int width, const int height, const int mipCount,
+                           const ksGpuTextureUsageFlags usageFlags, const void *data, const size_t dataSize) {
+    const int depth = 0;
+    const int layerCount = 0;
+    const int faceCount = 1;
+    return ksGpuTexture_CreateInternal(context, texture, "data", (GLenum)format, sampleCount, width, height, depth, layerCount,
+                                       faceCount, mipCount, usageFlags, data, dataSize, false);
+}
+
+bool ksGpuTexture_Create2DArray(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureFormat format,
+                                const ksGpuSampleCount sampleCount, const int width, const int height, const int layerCount,
+                                const int mipCount, const ksGpuTextureUsageFlags usageFlags, const void *data,
+                                const size_t dataSize) {
+    const int depth = 0;
+    const int faceCount = 1;
+    return ksGpuTexture_CreateInternal(context, texture, "data", (GLenum)format, sampleCount, width, height, depth, layerCount,
+                                       faceCount, mipCount, usageFlags, data, dataSize, false);
+}
+
+bool ksGpuTexture_CreateDefault(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureDefault defaultType,
+                                const int width, const int height, const int depth, const int layerCount, const int faceCount,
+                                const bool mipmaps, const bool border) {
+    const int TEXEL_SIZE = 4;
+    const int layerSize = width * height * TEXEL_SIZE;
+    const int dataSize = MAX(depth, 1) * MAX(layerCount, 1) * faceCount * layerSize;
+    unsigned char *data = (unsigned char *)malloc(dataSize);
+
+    if (defaultType == KS_GPU_TEXTURE_DEFAULT_CHECKERBOARD) {
+        const int blockSize = 32;  // must be a power of two
+        for (int layer = 0; layer < MAX(depth, 1) * MAX(layerCount, 1) * faceCount; layer++) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    if ((((x / blockSize) ^ (y / blockSize)) & 1) == 0) {
+                        data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 0] = (layer & 1) == 0 ? 96 : 160;
+                        data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 1] = 64;
+                        data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 2] = (layer & 1) == 0 ? 255 : 96;
+                    } else {
+                        data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 0] = (layer & 1) == 0 ? 64 : 160;
+                        data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 1] = 32;
+                        data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 2] = (layer & 1) == 0 ? 255 : 64;
+                    }
+                    data[layer * layerSize + (y * 128 + x) * TEXEL_SIZE + 3] = 255;
+                }
+            }
+        }
+    } else if (defaultType == KS_GPU_TEXTURE_DEFAULT_PYRAMIDS) {
+        const int blockSize = 32;  // must be a power of two
+        for (int layer = 0; layer < MAX(depth, 1) * MAX(layerCount, 1) * faceCount; layer++) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    const int mask = blockSize - 1;
+                    const int lx = x & mask;
+                    const int ly = y & mask;
+                    const int rx = mask - lx;
+                    const int ry = mask - ly;
+
+                    char cx = 0;
+                    char cy = 0;
+                    if (lx != ly && lx != ry) {
+                        int m = blockSize;
+                        if (lx < m) {
+                            m = lx;
+                            cx = -96;
+                            cy = 0;
+                        }
+                        if (ly < m) {
+                            m = ly;
+                            cx = 0;
+                            cy = -96;
+                        }
+                        if (rx < m) {
+                            m = rx;
+                            cx = +96;
+                            cy = 0;
+                        }
+                        if (ry < m) {
+                            m = ry;
+                            cx = 0;
+                            cy = +96;
+                        }
+                    }
+                    data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 0] = 128 + cx;
+                    data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 1] = 128 + cy;
+                    data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 2] = 128 + 85;
+                    data[layer * layerSize + (y * width + x) * TEXEL_SIZE + 3] = 255;
+                }
+            }
+        }
+    } else if (defaultType == KS_GPU_TEXTURE_DEFAULT_CIRCLES) {
+        const int blockSize = 32;  // must be a power of two
+        const int radius = 10;
+        const unsigned char colors[4][4] = {
+            {0xFF, 0x00, 0x00, 0xFF}, {0x00, 0xFF, 0x00, 0xFF}, {0x00, 0x00, 0xFF, 0xFF}, {0xFF, 0xFF, 0x00, 0xFF}};
+        for (int layer = 0; layer < MAX(depth, 1) * MAX(layerCount, 1) * faceCount; layer++) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    // Pick a color per block of texels.
+                    const int index = (((y / (blockSize / 2)) & 2) ^ ((x / (blockSize * 1)) & 2)) |
+                                      (((x / (blockSize * 1)) & 1) ^ ((y / (blockSize * 2)) & 1));
+
+                    // Draw a circle with radius 10 centered inside each 32x32 block of texels.
+                    const int dX = (x & ~(blockSize - 1)) + (blockSize / 2) - x;
+                    const int dY = (y & ~(blockSize - 1)) + (blockSize / 2) - y;
+                    const int dS = abs(dX * dX + dY * dY - radius * radius);
+                    const int scale = (dS <= blockSize) ? dS : blockSize;
+
+                    for (int c = 0; c < TEXEL_SIZE - 1; c++) {
+                        data[layer * layerSize + (y * width + x) * TEXEL_SIZE + c] =
+                            (unsigned char)((colors[index][c] * scale) / blockSize);
+                    }
+                    data[layer * layerSize + (y * width + x) * TEXEL_SIZE + TEXEL_SIZE - 1] = 255;
+                }
+            }
+        }
+    }
+
+    if (border) {
+        for (int layer = 0; layer < MAX(depth, 1) * MAX(layerCount, 1) * faceCount; layer++) {
+            for (int x = 0; x < width; x++) {
+                data[layer * layerSize + (0 * width + x) * TEXEL_SIZE + 0] = 0;
+                data[layer * layerSize + (0 * width + x) * TEXEL_SIZE + 1] = 0;
+                data[layer * layerSize + (0 * width + x) * TEXEL_SIZE + 2] = 0;
+                data[layer * layerSize + (0 * width + x) * TEXEL_SIZE + 3] = 255;
+
+                data[layer * layerSize + ((height - 1) * width + x) * TEXEL_SIZE + 0] = 0;
+                data[layer * layerSize + ((height - 1) * width + x) * TEXEL_SIZE + 1] = 0;
+                data[layer * layerSize + ((height - 1) * width + x) * TEXEL_SIZE + 2] = 0;
+                data[layer * layerSize + ((height - 1) * width + x) * TEXEL_SIZE + 3] = 255;
+            }
+            for (int y = 0; y < height; y++) {
+                data[layer * layerSize + (y * width + 0) * TEXEL_SIZE + 0] = 0;
+                data[layer * layerSize + (y * width + 0) * TEXEL_SIZE + 1] = 0;
+                data[layer * layerSize + (y * width + 0) * TEXEL_SIZE + 2] = 0;
+                data[layer * layerSize + (y * width + 0) * TEXEL_SIZE + 3] = 255;
+
+                data[layer * layerSize + (y * width + width - 1) * TEXEL_SIZE + 0] = 0;
+                data[layer * layerSize + (y * width + width - 1) * TEXEL_SIZE + 1] = 0;
+                data[layer * layerSize + (y * width + width - 1) * TEXEL_SIZE + 2] = 0;
+                data[layer * layerSize + (y * width + width - 1) * TEXEL_SIZE + 3] = 255;
+            }
+        }
+    }
+
+    const int mipCount = (mipmaps) ? -1 : 1;
+    bool success =
+        ksGpuTexture_CreateInternal(context, texture, "data", GL_RGBA8, KS_GPU_SAMPLE_COUNT_1, width, height, depth, layerCount,
+                                    faceCount, mipCount, KS_GPU_TEXTURE_USAGE_SAMPLED, data, dataSize, false);
+
+    free(data);
+
+    return success;
+}
+
+bool ksGpuTexture_CreateFromSwapchain(ksGpuContext *context, ksGpuTexture *texture, const ksGpuWindow *window, int index) {
+    UNUSED_PARM(context);
+    UNUSED_PARM(index);
+
+    memset(texture, 0, sizeof(ksGpuTexture));
+
+    texture->width = window->windowWidth;
+    texture->height = window->windowHeight;
+    texture->depth = 1;
+    texture->layerCount = 1;
+    texture->mipCount = 1;
+    texture->sampleCount = KS_GPU_SAMPLE_COUNT_1;
+    texture->usage = KS_GPU_TEXTURE_USAGE_UNDEFINED;
+    texture->wrapMode = KS_GPU_TEXTURE_WRAP_MODE_REPEAT;
+    texture->filter = KS_GPU_TEXTURE_FILTER_LINEAR;
+    texture->maxAnisotropy = 1.0f;
+    texture->format = ksGpuContext_InternalSurfaceColorFormat(window->colorFormat);
+    texture->target = 0;
+    texture->texture = 0;
+
+    return true;
+}
+
+// KTX is a format for storing textures for OpenGL and OpenGL ES applications.
+// https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
+// This KTX loader does not do any conversions. In other words, the format
+// stored in the KTX file must be the same as the glInternaltFormat.
+bool ksGpuTexture_CreateFromKTX(ksGpuContext *context, ksGpuTexture *texture, const char *fileName, const unsigned char *buffer,
+                                const size_t bufferSize) {
+    memset(texture, 0, sizeof(ksGpuTexture));
+
+#pragma pack(1)
+    typedef struct {
+        unsigned char identifier[12];
+        unsigned int endianness;
+        unsigned int glType;
+        unsigned int glTypeSize;
+        unsigned int glFormat;
+        unsigned int glInternalFormat;
+        unsigned int glBaseInternalFormat;
+        unsigned int pixelWidth;
+        unsigned int pixelHeight;
+        unsigned int pixelDepth;
+        unsigned int numberOfArrayElements;
+        unsigned int numberOfFaces;
+        unsigned int numberOfMipmapLevels;
+        unsigned int bytesOfKeyValueData;
+    } GlHeaderKTX_t;
+#pragma pack()
+
+    if (bufferSize < sizeof(GlHeaderKTX_t)) {
+        Error("%s: Invalid KTX file", fileName);
+        return false;
+    }
+
+    const unsigned char fileIdentifier[12] = {(unsigned char)'\xAB', 'K',  'T',  'X',    ' ', '1', '1',
+                                              (unsigned char)'\xBB', '\r', '\n', '\x1A', '\n'};
+
+    const GlHeaderKTX_t *header = (GlHeaderKTX_t *)buffer;
+    if (memcmp(header->identifier, fileIdentifier, sizeof(fileIdentifier)) != 0) {
+        Error("%s: Invalid KTX file", fileName);
+        return false;
+    }
+    // only support little endian
+    if (header->endianness != 0x04030201) {
+        Error("%s: KTX file has wrong endianess", fileName);
+        return false;
+    }
+    // skip the key value data
+    const size_t startTex = sizeof(GlHeaderKTX_t) + header->bytesOfKeyValueData;
+    if ((startTex < sizeof(GlHeaderKTX_t)) || (startTex >= bufferSize)) {
+        Error("%s: Invalid KTX header sizes", fileName);
+        return false;
+    }
+
+    const unsigned int derivedFormat = glGetFormatFromInternalFormat(header->glInternalFormat);
+    const unsigned int derivedType = glGetTypeFromInternalFormat(header->glInternalFormat);
+
+    UNUSED_PARM(derivedFormat);
+    UNUSED_PARM(derivedType);
+
+    // The glFormat and glType must either both be zero or both be non-zero.
+    assert((header->glFormat == 0) == (header->glType == 0));
+    // Uncompressed glTypeSize must be 1, 2, 4 or 8.
+    assert(header->glFormat == 0 || header->glTypeSize == 1 || header->glTypeSize == 2 || header->glTypeSize == 4 ||
+           header->glTypeSize == 8);
+    // Uncompressed glFormat must match the format derived from glInternalFormat.
+    assert(header->glFormat == 0 || header->glFormat == derivedFormat);
+    // Uncompressed glType must match the type derived from glInternalFormat.
+    assert(header->glFormat == 0 || header->glType == derivedType);
+    // Uncompressed glBaseInternalFormat must be the same as glFormat.
+    assert(header->glFormat == 0 || header->glBaseInternalFormat == header->glFormat);
+    // Compressed glTypeSize must be 1.
+    assert(header->glFormat != 0 || header->glTypeSize == 1);
+    // Compressed glBaseInternalFormat must match the format drived from glInternalFormat.
+    assert(header->glFormat != 0 || header->glBaseInternalFormat == derivedFormat);
+
+    const int numberOfFaces = (header->numberOfFaces >= 1) ? header->numberOfFaces : 1;
+    const GLenum format = header->glInternalFormat;
+
+    return ksGpuTexture_CreateInternal(context, texture, fileName, format, KS_GPU_SAMPLE_COUNT_1, header->pixelWidth,
+                                       header->pixelHeight, header->pixelDepth, header->numberOfArrayElements, numberOfFaces,
+                                       header->numberOfMipmapLevels, KS_GPU_TEXTURE_USAGE_SAMPLED, buffer + startTex,
+                                       bufferSize - startTex, true);
+}
+
+bool ksGpuTexture_CreateFromFile(ksGpuContext *context, ksGpuTexture *texture, const char *fileName) {
+    memset(texture, 0, sizeof(ksGpuTexture));
+
+    FILE *fp = fopen(fileName, "rb");
+    if (fp == NULL) {
+        Error("Failed to open %s", fileName);
+        return false;
+    }
+
+    fseek(fp, 0L, SEEK_END);
+    size_t bufferSize = ftell(fp);
+    fseek(fp, 0L, SEEK_SET);
+
+    unsigned char *buffer = (unsigned char *)malloc(bufferSize);
+    if (fread(buffer, 1, bufferSize, fp) != bufferSize) {
+        Error("Failed to read %s", fileName);
+        free(buffer);
+        fclose(fp);
+        return false;
+    }
+    fclose(fp);
+
+    bool success = ksGpuTexture_CreateFromKTX(context, texture, fileName, buffer, bufferSize);
+
+    free(buffer);
+
+    return success;
+}
+
+void ksGpuTexture_Destroy(ksGpuContext *context, ksGpuTexture *texture) {
+    UNUSED_PARM(context);
+
+    if (texture->texture) {
+        GL(glDeleteTextures(1, &texture->texture));
+    }
+    memset(texture, 0, sizeof(ksGpuTexture));
+}
+
+void ksGpuTexture_SetWrapMode(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureWrapMode wrapMode) {
+    UNUSED_PARM(context);
+
+    texture->wrapMode = wrapMode;
+
+    const GLint wrap =
+        ((wrapMode == KS_GPU_TEXTURE_WRAP_MODE_CLAMP_TO_EDGE)
+             ? GL_CLAMP_TO_EDGE
+             : ((wrapMode == KS_GPU_TEXTURE_WRAP_MODE_CLAMP_TO_BORDER) ? glExtensions.texture_clamp_to_border_id : (GL_REPEAT)));
+
+    GL(glBindTexture(texture->target, texture->texture));
+    GL(glTexParameteri(texture->target, GL_TEXTURE_WRAP_S, wrap));
+    GL(glTexParameteri(texture->target, GL_TEXTURE_WRAP_T, wrap));
+    GL(glBindTexture(texture->target, 0));
+}
+
+void ksGpuTexture_SetFilter(ksGpuContext *context, ksGpuTexture *texture, const ksGpuTextureFilter filter) {
+    UNUSED_PARM(context);
+
+    texture->filter = filter;
+
+    GL(glBindTexture(texture->target, texture->texture));
+    if (filter == KS_GPU_TEXTURE_FILTER_NEAREST) {
+        GL(glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+        GL(glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    } else if (filter == KS_GPU_TEXTURE_FILTER_LINEAR) {
+        GL(glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        GL(glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    } else if (filter == KS_GPU_TEXTURE_FILTER_BILINEAR) {
+        GL(glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
+        GL(glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    }
+    GL(glBindTexture(texture->target, 0));
+}
+
+void ksGpuTexture_SetAniso(ksGpuContext *context, ksGpuTexture *texture, const float maxAniso) {
+    UNUSED_PARM(context);
+
+    texture->maxAnisotropy = maxAniso;
+
+    GL(glBindTexture(texture->target, texture->texture));
+    GL(glTexParameterf(texture->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAniso));
+    GL(glBindTexture(texture->target, 0));
+}
+
+void ksGpuTriangleIndexArray_CreateFromBuffer(ksGpuTriangleIndexArray *indices, const int indexCount, const ksGpuBuffer *buffer) {
+    indices->indexCount = indexCount;
+    indices->indexArray = NULL;
+    indices->buffer = buffer;
+}
+
+void ksGpuTriangleIndexArray_Alloc(ksGpuTriangleIndexArray *indices, const int indexCount, const ksGpuTriangleIndex *data) {
+    indices->indexCount = indexCount;
+    indices->indexArray = (ksGpuTriangleIndex *)malloc(indexCount * sizeof(ksGpuTriangleIndex));
+    if (data != NULL) {
+        memcpy(indices->indexArray, data, indexCount * sizeof(ksGpuTriangleIndex));
+    }
+    indices->buffer = NULL;
+}
+
+void ksGpuTriangleIndexArray_Free(ksGpuTriangleIndexArray *indices) {
+    free(indices->indexArray);
+    memset(indices, 0, sizeof(ksGpuTriangleIndexArray));
+}
+
+size_t ksGpuVertexAttributeArrays_GetDataSize(const ksGpuVertexAttribute *layout, const int vertexCount, const int attribsFlags) {
+    size_t totalSize = 0;
+    for (int i = 0; layout[i].attributeFlag != 0; i++) {
+        const ksGpuVertexAttribute *v = &layout[i];
+        if ((v->attributeFlag & attribsFlags) != 0) {
+            totalSize += v->attributeSize;
+        }
+    }
+    return vertexCount * totalSize;
+}
+
+void ksGpuVertexAttributeArrays_Map(ksGpuVertexAttributeArrays *attribs, void *data, const size_t dataSize, const int vertexCount,
+                                    const int attribsFlags) {
+    unsigned char *dataBytePtr = (unsigned char *)data;
+    size_t offset = 0;
+
+    for (int i = 0; attribs->layout[i].attributeFlag != 0; i++) {
+        const ksGpuVertexAttribute *v = &attribs->layout[i];
+        void **attribPtr = (void **)(((char *)attribs) + v->attributeOffset);
+        if ((v->attributeFlag & attribsFlags) != 0) {
+            *attribPtr = (dataBytePtr + offset);
+            offset += vertexCount * v->attributeSize;
+        } else {
+            *attribPtr = NULL;
+        }
+    }
+
+    assert(offset == dataSize);
+    UNUSED_PARM(dataSize);
+}
+
+void ksGpuVertexAttributeArrays_CreateFromBuffer(ksGpuVertexAttributeArrays *attribs, const ksGpuVertexAttribute *layout,
+                                                 const int vertexCount, const int attribsFlags, const ksGpuBuffer *buffer) {
+    attribs->buffer = buffer;
+    attribs->layout = layout;
+    attribs->data = NULL;
+    attribs->dataSize = 0;
+    attribs->vertexCount = vertexCount;
+    attribs->attribsFlags = attribsFlags;
+}
+
+void ksGpuVertexAttributeArrays_Alloc(ksGpuVertexAttributeArrays *attribs, const ksGpuVertexAttribute *layout,
+                                      const int vertexCount, const int attribsFlags) {
+    const size_t dataSize = ksGpuVertexAttributeArrays_GetDataSize(layout, vertexCount, attribsFlags);
+    void *data = malloc(dataSize);
+    attribs->buffer = NULL;
+    attribs->layout = layout;
+    attribs->data = data;
+    attribs->dataSize = dataSize;
+    attribs->vertexCount = vertexCount;
+    attribs->attribsFlags = attribsFlags;
+    ksGpuVertexAttributeArrays_Map(attribs, data, dataSize, vertexCount, attribsFlags);
+}
+
+void ksGpuVertexAttributeArrays_Free(ksGpuVertexAttributeArrays *attribs) {
+    free(attribs->data);
+    memset(attribs, 0, sizeof(ksGpuVertexAttributeArrays));
+}
+
+void *ksGpuVertexAttributeArrays_FindAtribute(ksGpuVertexAttributeArrays *attribs, const char *name,
+                                              const ksGpuAttributeFormat format) {
+    for (int i = 0; attribs->layout[i].attributeFlag != 0; i++) {
+        const ksGpuVertexAttribute *v = &attribs->layout[i];
+        if (v->attributeFormat == format && strcmp(v->name, name) == 0) {
+            void **attribPtr = (void **)(((char *)attribs) + v->attributeOffset);
+            return *attribPtr;
+        }
+    }
+    return NULL;
+}
+
+void ksGpuVertexAttributeArrays_CalculateTangents(ksGpuVertexAttributeArrays *attribs, const ksGpuTriangleIndexArray *indices) {
+    ksVector3f *vertexPosition =
+        (ksVector3f *)ksGpuVertexAttributeArrays_FindAtribute(attribs, "vertexPosition", KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT);
+    ksVector3f *vertexNormal =
+        (ksVector3f *)ksGpuVertexAttributeArrays_FindAtribute(attribs, "vertexNormal", KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT);
+    ksVector3f *vertexTangent =
+        (ksVector3f *)ksGpuVertexAttributeArrays_FindAtribute(attribs, "vertexTangent", KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT);
+    ksVector3f *vertexBinormal =
+        (ksVector3f *)ksGpuVertexAttributeArrays_FindAtribute(attribs, "vertexBinormal", KS_GPU_ATTRIBUTE_FORMAT_R32G32B32_SFLOAT);
+    ksVector2f *vertexUv0 =
+        (ksVector2f *)ksGpuVertexAttributeArrays_FindAtribute(attribs, "vertexUv0", KS_GPU_ATTRIBUTE_FORMAT_R32G32_SFLOAT);
+
+    if (vertexPosition == NULL || vertexNormal == NULL || vertexTangent == NULL || vertexBinormal == NULL || vertexUv0 == NULL) {
+        assert(false);
+        return;
+    }
+
+    for (int i = 0; i < attribs->vertexCount; i++) {
+        ksVector3f_Set(&vertexTangent[i], 0.0f);
+        ksVector3f_Set(&vertexBinormal[i], 0.0f);
+    }
+
+    for (int i = 0; i < indices->indexCount; i += 3) {
+        const ksGpuTriangleIndex *v = indices->indexArray + i;
+        const ksVector3f *pos = vertexPosition;
+        const ksVector2f *uv0 = vertexUv0;
+
+        const ksVector3f delta0 = {pos[v[1]].x - pos[v[0]].x, pos[v[1]].y - pos[v[0]].y, pos[v[1]].z - pos[v[0]].z};
+        const ksVector3f delta1 = {pos[v[2]].x - pos[v[1]].x, pos[v[2]].y - pos[v[1]].y, pos[v[2]].z - pos[v[1]].z};
+        const ksVector3f delta2 = {pos[v[0]].x - pos[v[2]].x, pos[v[0]].y - pos[v[2]].y, pos[v[0]].z - pos[v[2]].z};
+
+        const float l0 = delta0.x * delta0.x + delta0.y * delta0.y + delta0.z * delta0.z;
+        const float l1 = delta1.x * delta1.x + delta1.y * delta1.y + delta1.z * delta1.z;
+        const float l2 = delta2.x * delta2.x + delta2.y * delta2.y + delta2.z * delta2.z;
+
+        const int i0 = (l0 > l1) ? (l0 > l2 ? 2 : 1) : (l1 > l2 ? 0 : 1);
+        const int i1 = (i0 + 1) % 3;
+        const int i2 = (i0 + 2) % 3;
+
+        const ksVector3f d0 = {pos[v[i1]].x - pos[v[i0]].x, pos[v[i1]].y - pos[v[i0]].y, pos[v[i1]].z - pos[v[i0]].z};
+        const ksVector3f d1 = {pos[v[i2]].x - pos[v[i0]].x, pos[v[i2]].y - pos[v[i0]].y, pos[v[i2]].z - pos[v[i0]].z};
+
+        const ksVector2f s0 = {uv0[v[i1]].x - uv0[v[i0]].x, uv0[v[i1]].y - uv0[v[i0]].y};
+        const ksVector2f s1 = {uv0[v[i2]].x - uv0[v[i0]].x, uv0[v[i2]].y - uv0[v[i0]].y};
+
+        const float sign = (s0.x * s1.y - s0.y * s1.x) < 0.0f ? -1.0f : 1.0f;
+
+        ksVector3f tangent = {(d0.x * s1.y - d1.x * s0.y) * sign, (d0.y * s1.y - d1.y * s0.y) * sign,
+                              (d0.z * s1.y - d1.z * s0.y) * sign};
+        ksVector3f binormal = {(d1.x * s0.x - d0.x * s1.x) * sign, (d1.y * s0.x - d0.y * s1.x) * sign,
+                               (d1.z * s0.x - d0.z * s1.x) * sign};
+
+        ksVector3f_Normalize(&tangent);
+        ksVector3f_Normalize(&binormal);
+
+        for (int j = 0; j < 3; j++) {
+            vertexTangent[v[j]].x += tangent.x;
+            vertexTangent[v[j]].y += tangent.y;
+            vertexTangent[v[j]].z += tangent.z;
+
+            vertexBinormal[v[j]].x += binormal.x;
+            vertexBinormal[v[j]].y += binormal.y;
+            vertexBinormal[v[j]].z += binormal.z;
+        }
+    }
+
+    for (int i = 0; i < attribs->vertexCount; i++) {
+        ksVector3f_Normalize(&vertexTangent[i]);
+        ksVector3f_Normalize(&vertexBinormal[i]);
+    }
+}
+
+void ksGpuGeometry_Create(ksGpuContext *context, ksGpuGeometry *geometry, const ksGpuVertexAttributeArrays *attribs,
+                          const ksGpuTriangleIndexArray *indices) {
+    memset(geometry, 0, sizeof(ksGpuGeometry));
+
+    geometry->layout = attribs->layout;
+    geometry->vertexAttribsFlags = attribs->attribsFlags;
+    geometry->vertexCount = attribs->vertexCount;
+    geometry->indexCount = indices->indexCount;
+
+    if (attribs->buffer != NULL) {
+        ksGpuBuffer_CreateReference(context, &geometry->vertexBuffer, attribs->buffer);
+    } else {
+        ksGpuBuffer_Create(context, &geometry->vertexBuffer, KS_GPU_BUFFER_TYPE_VERTEX, attribs->dataSize, attribs->data, false);
+    }
+    if (indices->buffer != NULL) {
+        ksGpuBuffer_CreateReference(context, &geometry->indexBuffer, indices->buffer);
+    } else {
+        ksGpuBuffer_Create(context, &geometry->indexBuffer, KS_GPU_BUFFER_TYPE_INDEX,
+                           indices->indexCount * sizeof(indices->indexArray[0]), indices->indexArray, false);
+    }
+}
+
+// The quad is centered about the origin and without offset/scale spans the [-1, 1] X-Y range.
+void ksGpuGeometry_CreateQuad(ksGpuContext *context, ksGpuGeometry *geometry, const float offset, const float scale) {
+    const ksVector3f quadPositions[4] = {{-1.0f, -1.0f, 0.0f}, {+1.0f, -1.0f, 0.0f}, {+1.0f, +1.0f, 0.0f}, {-1.0f, +1.0f, 0.0f}};
+
+    const ksVector3f quadNormals[4] = {{0.0f, 0.0f, +1.0f}, {0.0f, 0.0f, +1.0f}, {0.0f, 0.0f, +1.0f}, {0.0f, 0.0f, +1.0f}};
+
+    const ksVector2f quadUvs[4] = {{0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}};
+
+    const ksGpuTriangleIndex quadIndices[6] = {0, 1, 2, 2, 3, 0};
+
+    ksDefaultVertexAttributeArrays quadAttributeArrays;
+    ksGpuVertexAttributeArrays_Alloc(&quadAttributeArrays.base, ksDefaultVertexAttributeLayout, 4,
+                                     VERTEX_ATTRIBUTE_FLAG_POSITION | VERTEX_ATTRIBUTE_FLAG_NORMAL | VERTEX_ATTRIBUTE_FLAG_TANGENT |
+                                         VERTEX_ATTRIBUTE_FLAG_BINORMAL | VERTEX_ATTRIBUTE_FLAG_UV0);
+
+    for (int i = 0; i < 4; i++) {
+        quadAttributeArrays.position[i].x = (quadPositions[i].x + offset) * scale;
+        quadAttributeArrays.position[i].y = (quadPositions[i].y + offset) * scale;
+        quadAttributeArrays.position[i].z = (quadPositions[i].z + offset) * scale;
+        quadAttributeArrays.normal[i].x = quadNormals[i].x;
+        quadAttributeArrays.normal[i].y = quadNormals[i].y;
+        quadAttributeArrays.normal[i].z = quadNormals[i].z;
+        quadAttributeArrays.uv0[i].x = quadUvs[i].x;
+        quadAttributeArrays.uv0[i].y = quadUvs[i].y;
+    }
+
+    ksGpuTriangleIndexArray quadIndexArray;
+    ksGpuTriangleIndexArray_Alloc(&quadIndexArray, 6, quadIndices);
+
+    ksGpuVertexAttributeArrays_CalculateTangents(&quadAttributeArrays.base, &quadIndexArray);
+
+    ksGpuGeometry_Create(context, geometry, &quadAttributeArrays.base, &quadIndexArray);
+
+    ksGpuVertexAttributeArrays_Free(&quadAttributeArrays.base);
+    ksGpuTriangleIndexArray_Free(&quadIndexArray);
+}
+
+// The cube is centered about the origin and without offset/scale spans the [-1, 1] X-Y-Z range.
+void ksGpuGeometry_CreateCube(ksGpuContext *context, ksGpuGeometry *geometry, const float offset, const float scale) {
+    const ksVector3f cubePositions[24] = {
+        {+1.0f, -1.0f, -1.0f}, {+1.0f, +1.0f, -1.0f}, {+1.0f, +1.0f, +1.0f}, {+1.0f, -1.0f, +1.0f},
+        {-1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f, +1.0f}, {-1.0f, +1.0f, +1.0f}, {-1.0f, +1.0f, -1.0f},
+
+        {-1.0f, +1.0f, -1.0f}, {+1.0f, +1.0f, -1.0f}, {+1.0f, +1.0f, +1.0f}, {-1.0f, +1.0f, +1.0f},
+        {-1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f, +1.0f}, {+1.0f, -1.0f, +1.0f}, {+1.0f, -1.0f, -1.0f},
+
+        {-1.0f, -1.0f, +1.0f}, {+1.0f, -1.0f, +1.0f}, {+1.0f, +1.0f, +1.0f}, {-1.0f, +1.0f, +1.0f},
+        {-1.0f, -1.0f, -1.0f}, {-1.0f, +1.0f, -1.0f}, {+1.0f, +1.0f, -1.0f}, {+1.0f, -1.0f, -1.0f}};
+
+    const ksVector3f cubeNormals[24] = {{+1.0f, 0.0f, 0.0f}, {+1.0f, 0.0f, 0.0f}, {+1.0f, 0.0f, 0.0f}, {+1.0f, 0.0f, 0.0f},
+                                        {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f},
+
+                                        {0.0f, +1.0f, 0.0f}, {0.0f, +1.0f, 0.0f}, {0.0f, +1.0f, 0.0f}, {0.0f, +1.0f, 0.0f},
+                                        {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f},
+
+                                        {0.0f, 0.0f, +1.0f}, {0.0f, 0.0f, +1.0f}, {0.0f, 0.0f, +1.0f}, {0.0f, 0.0f, +1.0f},
+                                        {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f}};
+
+    const ksVector2f cubeUvs[24] = {
+        {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f},
+
+        {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f},
+
+        {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f},
+    };
+
+    const ksGpuTriangleIndex cubeIndices[36] = {0,  1,  2,  2,  3,  0,  4,  5,  6,  6,  7,  4,  8,  10, 9,  10, 8,  11,
+                                                12, 14, 13, 14, 12, 15, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20};
+
+    ksDefaultVertexAttributeArrays cubeAttributeArrays;
+    ksGpuVertexAttributeArrays_Alloc(&cubeAttributeArrays.base, ksDefaultVertexAttributeLayout, 24,
+                                     VERTEX_ATTRIBUTE_FLAG_POSITION | VERTEX_ATTRIBUTE_FLAG_NORMAL | VERTEX_ATTRIBUTE_FLAG_TANGENT |
+                                         VERTEX_ATTRIBUTE_FLAG_BINORMAL | VERTEX_ATTRIBUTE_FLAG_UV0);
+
+    for (int i = 0; i < 24; i++) {
+        cubeAttributeArrays.position[i].x = (cubePositions[i].x + offset) * scale;
+        cubeAttributeArrays.position[i].y = (cubePositions[i].y + offset) * scale;
+        cubeAttributeArrays.position[i].z = (cubePositions[i].z + offset) * scale;
+        cubeAttributeArrays.normal[i].x = cubeNormals[i].x;
+        cubeAttributeArrays.normal[i].y = cubeNormals[i].y;
+        cubeAttributeArrays.normal[i].z = cubeNormals[i].z;
+        cubeAttributeArrays.uv0[i].x = cubeUvs[i].x;
+        cubeAttributeArrays.uv0[i].y = cubeUvs[i].y;
+    }
+
+    ksGpuTriangleIndexArray cubeIndexArray;
+    ksGpuTriangleIndexArray_Alloc(&cubeIndexArray, 36, cubeIndices);
+
+    ksGpuVertexAttributeArrays_CalculateTangents(&cubeAttributeArrays.base, &cubeIndexArray);
+
+    ksGpuGeometry_Create(context, geometry, &cubeAttributeArrays.base, &cubeIndexArray);
+
+    ksGpuVertexAttributeArrays_Free(&cubeAttributeArrays.base);
+    ksGpuTriangleIndexArray_Free(&cubeIndexArray);
+}
+
+// The torus is centered about the origin and without offset/scale spans the [-1, 1] X-Y range and the [-0.3, 0.3] Z range.
+void ksGpuGeometry_CreateTorus(ksGpuContext *context, ksGpuGeometry *geometry, const int tesselation, const float offset,
+                               const float scale) {
+    const int minorTesselation = tesselation;
+    const int majorTesselation = tesselation;
+    const float tubeRadius = 0.3f;
+    const float tubeCenter = 0.7f;
+    const int vertexCount = (majorTesselation + 1) * (minorTesselation + 1);
+    const int indexCount = majorTesselation * minorTesselation * 6;
+
+    ksDefaultVertexAttributeArrays torusAttributeArrays;
+    ksGpuVertexAttributeArrays_Alloc(&torusAttributeArrays.base, ksDefaultVertexAttributeLayout, vertexCount,
+                                     VERTEX_ATTRIBUTE_FLAG_POSITION | VERTEX_ATTRIBUTE_FLAG_NORMAL | VERTEX_ATTRIBUTE_FLAG_TANGENT |
+                                         VERTEX_ATTRIBUTE_FLAG_BINORMAL | VERTEX_ATTRIBUTE_FLAG_UV0);
+
+    for (int u = 0; u <= majorTesselation; u++) {
+        const float ua = 2.0f * MATH_PI * u / majorTesselation;
+        const float majorCos = cosf(ua);
+        const float majorSin = sinf(ua);
+
+        for (int v = 0; v <= minorTesselation; v++) {
+            const float va = MATH_PI + 2.0f * MATH_PI * v / minorTesselation;
+            const float minorCos = cosf(va);
+            const float minorSin = sinf(va);
+
+            const float minorX = tubeCenter + tubeRadius * minorCos;
+            const float minorZ = tubeRadius * minorSin;
+
+            const int index = u * (minorTesselation + 1) + v;
+            torusAttributeArrays.position[index].x = (minorX * majorCos * scale) + offset;
+            torusAttributeArrays.position[index].y = (minorX * majorSin * scale) + offset;
+            torusAttributeArrays.position[index].z = (minorZ * scale) + offset;
+            torusAttributeArrays.normal[index].x = minorCos * majorCos;
+            torusAttributeArrays.normal[index].y = minorCos * majorSin;
+            torusAttributeArrays.normal[index].z = minorSin;
+            torusAttributeArrays.uv0[index].x = (float)u / majorTesselation;
+            torusAttributeArrays.uv0[index].y = (float)v / minorTesselation;
+        }
+    }
+
+    ksGpuTriangleIndexArray torusIndexArray;
+    ksGpuTriangleIndexArray_Alloc(&torusIndexArray, indexCount, NULL);
+
+    for (int u = 0; u < majorTesselation; u++) {
+        for (int v = 0; v < minorTesselation; v++) {
+            const int index = (u * minorTesselation + v) * 6;
+            torusIndexArray.indexArray[index + 0] = (ksGpuTriangleIndex)((u + 0) * (minorTesselation + 1) + (v + 0));
+            torusIndexArray.indexArray[index + 1] = (ksGpuTriangleIndex)((u + 1) * (minorTesselation + 1) + (v + 0));
+            torusIndexArray.indexArray[index + 2] = (ksGpuTriangleIndex)((u + 1) * (minorTesselation + 1) + (v + 1));
+            torusIndexArray.indexArray[index + 3] = (ksGpuTriangleIndex)((u + 1) * (minorTesselation + 1) + (v + 1));
+            torusIndexArray.indexArray[index + 4] = (ksGpuTriangleIndex)((u + 0) * (minorTesselation + 1) + (v + 1));
+            torusIndexArray.indexArray[index + 5] = (ksGpuTriangleIndex)((u + 0) * (minorTesselation + 1) + (v + 0));
+        }
+    }
+
+    ksGpuVertexAttributeArrays_CalculateTangents(&torusAttributeArrays.base, &torusIndexArray);
+
+    ksGpuGeometry_Create(context, geometry, &torusAttributeArrays.base, &torusIndexArray);
+
+    ksGpuVertexAttributeArrays_Free(&torusAttributeArrays.base);
+    ksGpuTriangleIndexArray_Free(&torusIndexArray);
+}
+
+void ksGpuGeometry_Destroy(ksGpuContext *context, ksGpuGeometry *geometry) {
+    ksGpuBuffer_Destroy(context, &geometry->indexBuffer);
+    ksGpuBuffer_Destroy(context, &geometry->vertexBuffer);
+    if (geometry->instanceBuffer.size != 0) {
+        ksGpuBuffer_Destroy(context, &geometry->instanceBuffer);
+    }
+
+    memset(geometry, 0, sizeof(ksGpuGeometry));
+}
+
+void ksGpuGeometry_AddInstanceAttributes(ksGpuContext *context, ksGpuGeometry *geometry, const int numInstances,
+                                         const int instanceAttribsFlags) {
+    assert(geometry->layout != NULL);
+    assert((geometry->vertexAttribsFlags & instanceAttribsFlags) == 0);
+
+    geometry->instanceCount = numInstances;
+    geometry->instanceAttribsFlags = instanceAttribsFlags;
+
+    const size_t dataSize = ksGpuVertexAttributeArrays_GetDataSize(geometry->layout, numInstances, geometry->instanceAttribsFlags);
+
+    ksGpuBuffer_Create(context, &geometry->instanceBuffer, KS_GPU_BUFFER_TYPE_VERTEX, dataSize, NULL, false);
+}
+
+bool ksGpuRenderPass_Create(ksGpuContext *context, ksGpuRenderPass *renderPass, const ksGpuSurfaceColorFormat colorFormat,
+                            const ksGpuSurfaceDepthFormat depthFormat, const ksGpuSampleCount sampleCount,
+                            const ksGpuRenderPassType type, const int flags) {
+    UNUSED_PARM(context);
+
+    assert(type == KS_GPU_RENDERPASS_TYPE_INLINE);
+
+    renderPass->type = type;
+    renderPass->flags = flags;
+    renderPass->colorFormat = colorFormat;
+    renderPass->depthFormat = depthFormat;
+    renderPass->sampleCount = sampleCount;
+    return true;
+}
+
+void ksGpuRenderPass_Destroy(ksGpuContext *context, ksGpuRenderPass *renderPass) {
+    UNUSED_PARM(context);
+    UNUSED_PARM(renderPass);
+}
+
+bool ksGpuFramebuffer_CreateFromSwapchain(ksGpuWindow *window, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass) {
+    assert(window->sampleCount == renderPass->sampleCount);
+
+    UNUSED_PARM(renderPass);
+
+    memset(framebuffer, 0, sizeof(ksGpuFramebuffer));
+
+    static const int NUM_BUFFERS = 1;
+
+    framebuffer->colorTextures = (ksGpuTexture *)malloc(NUM_BUFFERS * sizeof(ksGpuTexture));
+    framebuffer->renderTexture = 0;
+    framebuffer->depthBuffer = 0;
+    framebuffer->renderBuffers = (GLuint *)malloc(NUM_BUFFERS * sizeof(GLuint));
+    framebuffer->resolveBuffers = framebuffer->renderBuffers;
+    framebuffer->multiView = false;
+    framebuffer->sampleCount = KS_GPU_SAMPLE_COUNT_1;
+    framebuffer->numFramebuffersPerTexture = 1;
+    framebuffer->numBuffers = NUM_BUFFERS;
+    framebuffer->currentBuffer = 0;
+
+    // Create the color textures.
+    for (int bufferIndex = 0; bufferIndex < NUM_BUFFERS; bufferIndex++) {
+        assert(renderPass->colorFormat == window->colorFormat);
+        assert(renderPass->depthFormat == window->depthFormat);
+
+        ksGpuTexture_CreateFromSwapchain(&window->context, &framebuffer->colorTextures[bufferIndex], window, bufferIndex);
+
+        assert(window->windowWidth == framebuffer->colorTextures[bufferIndex].width);
+        assert(window->windowHeight == framebuffer->colorTextures[bufferIndex].height);
+
+        framebuffer->renderBuffers[bufferIndex] = 0;
+    }
+
+    return true;
+}
+
+bool ksGpuFramebuffer_CreateFromTextures(ksGpuContext *context, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass,
+                                         const int width, const int height, const int numBuffers) {
+    UNUSED_PARM(context);
+
+    memset(framebuffer, 0, sizeof(ksGpuFramebuffer));
+
+    framebuffer->colorTextures = (ksGpuTexture *)malloc(numBuffers * sizeof(ksGpuTexture));
+    framebuffer->renderTexture = 0;
+    framebuffer->depthBuffer = 0;
+    framebuffer->renderBuffers = (GLuint *)malloc(numBuffers * sizeof(GLuint));
+    framebuffer->resolveBuffers = framebuffer->renderBuffers;
+    framebuffer->multiView = false;
+    framebuffer->sampleCount = KS_GPU_SAMPLE_COUNT_1;
+    framebuffer->numFramebuffersPerTexture = 1;
+    framebuffer->numBuffers = numBuffers;
+    framebuffer->currentBuffer = 0;
+
+    const ksGpuMsaaMode mode = ((renderPass->sampleCount > KS_GPU_SAMPLE_COUNT_1 && glExtensions.multi_sampled_resolve)
+                                    ? MSAA_RESOLVE
+                                    : ((renderPass->sampleCount > KS_GPU_SAMPLE_COUNT_1) ? MSAA_BLIT : MSAA_OFF));
+
+    // Create the color textures.
+    const GLenum colorFormat = ksGpuContext_InternalSurfaceColorFormat(renderPass->colorFormat);
+    for (int bufferIndex = 0; bufferIndex < numBuffers; bufferIndex++) {
+        ksGpuTexture_Create2D(context, &framebuffer->colorTextures[bufferIndex], (ksGpuTextureFormat)colorFormat,
+                              KS_GPU_SAMPLE_COUNT_1, width, height, 1,
+                              KS_GPU_TEXTURE_USAGE_SAMPLED | KS_GPU_TEXTURE_USAGE_COLOR_ATTACHMENT | KS_GPU_TEXTURE_USAGE_STORAGE,
+                              NULL, 0);
+        ksGpuTexture_SetWrapMode(context, &framebuffer->colorTextures[bufferIndex], KS_GPU_TEXTURE_WRAP_MODE_CLAMP_TO_BORDER);
+    }
+
+    // Create the depth buffer.
+    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+        const GLenum depthFormat = ksGpuContext_InternalSurfaceDepthFormat(renderPass->depthFormat);
+
+        GL(glGenRenderbuffers(1, &framebuffer->depthBuffer));
+        GL(glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->depthBuffer));
+        if (mode == MSAA_RESOLVE) {
+            GL(glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, renderPass->sampleCount, depthFormat, width, height));
+        } else if (mode == MSAA_BLIT) {
+            GL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, renderPass->sampleCount, depthFormat, width, height));
+        } else {
+            GL(glRenderbufferStorage(GL_RENDERBUFFER, depthFormat, width, height));
+        }
+        GL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
+    }
+
+    // Create the render buffers.
+    const int numRenderBuffers = (mode == MSAA_BLIT) ? 1 : numBuffers;
+    for (int bufferIndex = 0; bufferIndex < numRenderBuffers; bufferIndex++) {
+        GL(glGenFramebuffers(1, &framebuffer->renderBuffers[bufferIndex]));
+        GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer->renderBuffers[bufferIndex]));
+        if (mode == MSAA_RESOLVE) {
+            GL(glFramebufferTexture2DMultisampleEXT(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                                                    framebuffer->colorTextures[bufferIndex].texture, 0, renderPass->sampleCount));
+        } else if (mode == MSAA_BLIT) {
+            GL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, renderPass->sampleCount, colorFormat, width, height));
+        } else {
+            GL(glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                                      framebuffer->colorTextures[bufferIndex].texture, 0));
+        }
+        if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+            GL(glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, framebuffer->depthBuffer));
+        }
+        GL(glGetIntegerv(GL_SAMPLES, &framebuffer->sampleCount));
+        GL(GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+        GL(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
+        GL(glClear(GL_COLOR_BUFFER_BIT));
+        GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
+        if (status != GL_FRAMEBUFFER_COMPLETE) {
+            Error("Incomplete frame buffer object: %s", GlFramebufferStatusString(status));
+            return false;
+        }
+    }
+
+    // Create the resolve buffers.
+    if (mode == MSAA_BLIT) {
+        framebuffer->resolveBuffers = (GLuint *)malloc(numBuffers * sizeof(GLuint));
+        for (int bufferIndex = 0; bufferIndex < numBuffers; bufferIndex++) {
+            framebuffer->renderBuffers[bufferIndex] = framebuffer->renderBuffers[0];
+
+            GL(glGenFramebuffers(1, &framebuffer->resolveBuffers[bufferIndex]));
+            GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                                      framebuffer->colorTextures[bufferIndex].texture, 0));
+            GL(GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+            GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
+            if (status != GL_FRAMEBUFFER_COMPLETE) {
+                Error("Incomplete frame buffer object: %s", GlFramebufferStatusString(status));
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool ksGpuFramebuffer_CreateFromTextureArrays(ksGpuContext *context, ksGpuFramebuffer *framebuffer, ksGpuRenderPass *renderPass,
+                                              const int width, const int height, const int numLayers, const int numBuffers,
+                                              const bool multiview) {
+    UNUSED_PARM(context);
+
+    memset(framebuffer, 0, sizeof(ksGpuFramebuffer));
+
+    framebuffer->colorTextures = (ksGpuTexture *)malloc(numBuffers * sizeof(ksGpuTexture));
+    framebuffer->depthBuffer = 0;
+    framebuffer->multiView = multiview;
+    framebuffer->sampleCount = KS_GPU_SAMPLE_COUNT_1;
+    framebuffer->numFramebuffersPerTexture = (multiview ? 1 : numLayers);
+    framebuffer->renderBuffers = (GLuint *)malloc(numBuffers * framebuffer->numFramebuffersPerTexture * sizeof(GLuint));
+    framebuffer->resolveBuffers = framebuffer->renderBuffers;
+    framebuffer->numBuffers = numBuffers;
+    framebuffer->currentBuffer = 0;
+
+    const ksGpuMsaaMode mode =
+        ((renderPass->sampleCount > KS_GPU_SAMPLE_COUNT_1 && !multiview && glExtensions.multi_sampled_resolve)
+             ? MSAA_RESOLVE
+             : ((renderPass->sampleCount > KS_GPU_SAMPLE_COUNT_1 && multiview && glExtensions.multi_view_multi_sampled_resolve)
+                    ? MSAA_RESOLVE
+                    : ((renderPass->sampleCount > KS_GPU_SAMPLE_COUNT_1 && glExtensions.multi_sampled_storage) ? MSAA_BLIT
+                                                                                                               : MSAA_OFF)));
+
+    // Create the color textures.
+    const GLenum colorFormat = ksGpuContext_InternalSurfaceColorFormat(renderPass->colorFormat);
+    for (int bufferIndex = 0; bufferIndex < numBuffers; bufferIndex++) {
+        ksGpuTexture_Create2DArray(
+            context, &framebuffer->colorTextures[bufferIndex], (ksGpuTextureFormat)colorFormat, KS_GPU_SAMPLE_COUNT_1, width,
+            height, numLayers, 1,
+            KS_GPU_TEXTURE_USAGE_SAMPLED | KS_GPU_TEXTURE_USAGE_COLOR_ATTACHMENT | KS_GPU_TEXTURE_USAGE_STORAGE, NULL, 0);
+        ksGpuTexture_SetWrapMode(context, &framebuffer->colorTextures[bufferIndex], KS_GPU_TEXTURE_WRAP_MODE_CLAMP_TO_BORDER);
+    }
+
+    // Create the render texture.
+    if (mode == MSAA_BLIT) {
+        GL(glGenTextures(1, &framebuffer->renderTexture));
+        GL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE_ARRAY, framebuffer->renderTexture));
+        GL(glTexStorage3DMultisample(GL_TEXTURE_2D_MULTISAMPLE_ARRAY, renderPass->sampleCount, colorFormat, width, height,
+                                     numLayers, GL_TRUE));
+        GL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE_ARRAY, 0));
+    }
+
+    // Create the depth buffer.
+    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+        const GLenum depthFormat = ksGpuContext_InternalSurfaceDepthFormat(renderPass->depthFormat);
+        const GLenum target = (mode == MSAA_BLIT) ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY;
+
+        GL(glGenTextures(1, &framebuffer->depthBuffer));
+        GL(glBindTexture(target, framebuffer->depthBuffer));
+        if (mode == MSAA_BLIT) {
+            GL(glTexStorage3DMultisample(target, renderPass->sampleCount, depthFormat, width, height, numLayers, GL_TRUE));
+        } else {
+            GL(glTexStorage3D(target, 1, depthFormat, width, height, numLayers));
+        }
+        GL(glBindTexture(target, 0));
+    }
+
+    // Create the render buffers.
+    const int numRenderBuffers = (mode == MSAA_BLIT) ? 1 : numBuffers;
+    for (int bufferIndex = 0; bufferIndex < numRenderBuffers; bufferIndex++) {
+        for (int layerIndex = 0; layerIndex < framebuffer->numFramebuffersPerTexture; layerIndex++) {
+            GL(glGenFramebuffers(1,
+                                 &framebuffer->renderBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex]));
+            GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER,
+                                 framebuffer->renderBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex]));
+            if (multiview) {
+                if (mode == MSAA_RESOLVE) {
+                    GL(glFramebufferTextureMultisampleMultiviewOVR(
+                        GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, framebuffer->colorTextures[bufferIndex].texture, 0 /* level */,
+                        renderPass->sampleCount /* samples */, 0 /* baseViewIndex */, numLayers /* numViews */));
+                    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+                        GL(glFramebufferTextureMultisampleMultiviewOVR(
+                            GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, framebuffer->depthBuffer, 0 /* level */,
+                            renderPass->sampleCount /* samples */, 0 /* baseViewIndex */, numLayers /* numViews */));
+                    }
+                } else if (mode == MSAA_BLIT) {
+                    GL(glFramebufferTextureMultiviewOVR(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, framebuffer->renderTexture,
+                                                        0 /* level */, 0 /* baseViewIndex */, numLayers /* numViews */));
+                    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+                        GL(glFramebufferTextureMultiviewOVR(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, framebuffer->depthBuffer,
+                                                            0 /* level */, 0 /* baseViewIndex */, numLayers /* numViews */));
+                    }
+                } else {
+                    GL(glFramebufferTextureMultiviewOVR(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                                        framebuffer->colorTextures[bufferIndex].texture, 0 /* level */,
+                                                        0 /* baseViewIndex */, numLayers /* numViews */));
+                    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+                        GL(glFramebufferTextureMultiviewOVR(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, framebuffer->depthBuffer,
+                                                            0 /* level */, 0 /* baseViewIndex */, numLayers /* numViews */));
+                    }
+                }
+            } else {
+                if (mode == MSAA_RESOLVE) {
+                    // Note: using glFramebufferTextureMultisampleMultiviewOVR with a single view because there is no
+                    // glFramebufferTextureLayerMultisampleEXT
+                    GL(glFramebufferTextureMultisampleMultiviewOVR(
+                        GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, framebuffer->colorTextures[bufferIndex].texture, 0 /* level */,
+                        renderPass->sampleCount /* samples */, layerIndex /* baseViewIndex */, 1 /* numViews */));
+                    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+                        GL(glFramebufferTextureMultisampleMultiviewOVR(
+                            GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, framebuffer->depthBuffer, 0 /* level */,
+                            renderPass->sampleCount /* samples */, layerIndex /* baseViewIndex */, 1 /* numViews */));
+                    }
+                } else if (mode == MSAA_BLIT) {
+                    GL(glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, framebuffer->renderTexture,
+                                                 0 /* level */, layerIndex /* layerIndex */));
+                    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+                        GL(glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, framebuffer->depthBuffer,
+                                                     0 /* level */, layerIndex /* layerIndex */));
+                    }
+                } else {
+                    GL(glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                                 framebuffer->colorTextures[bufferIndex].texture, 0 /* level */,
+                                                 layerIndex /* layerIndex */));
+                    if (renderPass->depthFormat != KS_GPU_SURFACE_DEPTH_FORMAT_NONE) {
+                        GL(glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, framebuffer->depthBuffer,
+                                                     0 /* level */, layerIndex /* layerIndex */));
+                    }
+                }
+            }
+            GL(glGetIntegerv(GL_SAMPLES, &framebuffer->sampleCount));
+            GL(GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+            GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
+            if (status != GL_FRAMEBUFFER_COMPLETE) {
+                Error("Incomplete frame buffer object: %s", GlFramebufferStatusString(status));
+                return false;
+            }
+        }
+    }
+
+    // Create the resolve buffers.
+    if (mode == MSAA_BLIT) {
+        framebuffer->resolveBuffers = (GLuint *)malloc(numBuffers * framebuffer->numFramebuffersPerTexture * sizeof(GLuint));
+        for (int bufferIndex = 0; bufferIndex < numBuffers; bufferIndex++) {
+            for (int layerIndex = 0; layerIndex < framebuffer->numFramebuffersPerTexture; layerIndex++) {
+                framebuffer->renderBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex] =
+                    framebuffer->renderBuffers[layerIndex];
+
+                GL(glGenFramebuffers(
+                    1, &framebuffer->resolveBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex]));
+                GL(glBindFramebuffer(
+                    GL_DRAW_FRAMEBUFFER,
+                    framebuffer->resolveBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex]));
+                GL(glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, framebuffer->colorTextures[bufferIndex].texture,
+                                             0 /* level */, layerIndex /* layerIndex */));
+                GL(GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+                GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
+                if (status != GL_FRAMEBUFFER_COMPLETE) {
+                    Error("Incomplete frame buffer object: %s", GlFramebufferStatusString(status));
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+void ksGpuFramebuffer_Destroy(ksGpuContext *context, ksGpuFramebuffer *framebuffer) {
+    for (int bufferIndex = 0; bufferIndex < framebuffer->numBuffers; bufferIndex++) {
+        if (framebuffer->resolveBuffers != framebuffer->renderBuffers) {
+            for (int layerIndex = 0; layerIndex < framebuffer->numFramebuffersPerTexture; layerIndex++) {
+                if (framebuffer->resolveBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex] != 0) {
+                    GL(glDeleteFramebuffers(
+                        1, &framebuffer->resolveBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex]));
+                }
+            }
+        }
+        if (bufferIndex == 0 ||
+            framebuffer->renderBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + 0] != framebuffer->renderBuffers[0]) {
+            for (int layerIndex = 0; layerIndex < framebuffer->numFramebuffersPerTexture; layerIndex++) {
+                if (framebuffer->renderBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex] != 0) {
+                    GL(glDeleteFramebuffers(
+                        1, &framebuffer->renderBuffers[bufferIndex * framebuffer->numFramebuffersPerTexture + layerIndex]));
+                }
+            }
+        }
+    }
+    if (framebuffer->depthBuffer != 0) {
+        if (framebuffer->colorTextures[0].layerCount > 0) {
+            GL(glDeleteTextures(1, &framebuffer->depthBuffer));
+        } else {
+            GL(glDeleteRenderbuffers(1, &framebuffer->depthBuffer));
+        }
+    }
+    if (framebuffer->renderTexture != 0) {
+        if (framebuffer->colorTextures[0].layerCount > 0) {
+            GL(glDeleteTextures(1, &framebuffer->renderTexture));
+        } else {
+            GL(glDeleteRenderbuffers(1, &framebuffer->renderTexture));
+        }
+    }
+    for (int bufferIndex = 0; bufferIndex < framebuffer->numBuffers; bufferIndex++) {
+        if (framebuffer->colorTextures[bufferIndex].texture != 0) {
+            ksGpuTexture_Destroy(context, &framebuffer->colorTextures[bufferIndex]);
+        }
+    }
+    if (framebuffer->resolveBuffers != framebuffer->renderBuffers) {
+        free(framebuffer->resolveBuffers);
+    }
+    free(framebuffer->renderBuffers);
+    free(framebuffer->colorTextures);
+
+    memset(framebuffer, 0, sizeof(ksGpuFramebuffer));
+}
+
+int ksGpuFramebuffer_GetWidth(const ksGpuFramebuffer *framebuffer) {
+    return framebuffer->colorTextures[framebuffer->currentBuffer].width;
+}
+
+int ksGpuFramebuffer_GetHeight(const ksGpuFramebuffer *framebuffer) {
+    return framebuffer->colorTextures[framebuffer->currentBuffer].height;
+}
+
+ksScreenRect ksGpuFramebuffer_GetRect(const ksGpuFramebuffer *framebuffer) {
+    ksScreenRect rect;
+    rect.x = 0;
+    rect.y = 0;
+    rect.width = framebuffer->colorTextures[framebuffer->currentBuffer].width;
+    rect.height = framebuffer->colorTextures[framebuffer->currentBuffer].height;
+    return rect;
+}
+
+int ksGpuFramebuffer_GetBufferCount(const ksGpuFramebuffer *framebuffer) { return framebuffer->numBuffers; }
+
+ksGpuTexture *ksGpuFramebuffer_GetColorTexture(const ksGpuFramebuffer *framebuffer) {
+    assert(framebuffer->colorTextures != NULL);
+    return &framebuffer->colorTextures[framebuffer->currentBuffer];
+}
+
+#define KS_MAX_PROGRAM_PARMS 16
+
+typedef enum {
+    KS_GPU_PROGRAM_STAGE_FLAG_VERTEX = BIT(0),
+    KS_GPU_PROGRAM_STAGE_FLAG_FRAGMENT = BIT(1),
+    KS_GPU_PROGRAM_STAGE_FLAG_COMPUTE = BIT(2),
+    KS_GPU_PROGRAM_STAGE_MAX = 3
+} ksGpuProgramStageFlags;
+
+typedef enum {
+    KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_SAMPLED,    // texture plus sampler bound together        (GLSL: sampler*, isampler*,
+                                                 // usampler*)
+    KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE,    // not sampled, direct read-write storage    (GLSL: image*, iimage*, uimage*)
+    KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM,     // read-only uniform buffer                    (GLSL: uniform)
+    KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE,     // read-write storage buffer                (GLSL: buffer)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT,  // int                                        (GLSL:
+                                                 // int)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR2,      // int[2]                                    (GLSL:
+                                                             // ivec2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR3,      // int[3]                                    (GLSL:
+                                                             // ivec3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR4,      // int[4]                                    (GLSL:
+                                                             // ivec4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT,            // float                                    (GLSL:
+                                                             // float)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR2,    // float[2]                                    (GLSL:
+                                                             // vec2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR3,    // float[3]                                    (GLSL:
+                                                             // vec3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR4,    // float[4]                                    (GLSL:
+                                                             // vec4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X2,  // float[2][2]
+                                                             // (GLSL: mat2x2 or mat2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X3,  // float[2][3]
+                                                             // (GLSL: mat2x3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X4,  // float[2][4]
+                                                             // (GLSL: mat2x4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X2,  // float[3][2]
+                                                             // (GLSL: mat3x2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X3,  // float[3][3]
+                                                             // (GLSL: mat3x3 or mat3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X4,  // float[3][4]
+                                                             // (GLSL: mat3x4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X2,  // float[4][2]
+                                                             // (GLSL: mat4x2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X3,  // float[4][3]
+                                                             // (GLSL: mat4x3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X4,  // float[4][4]
+                                                             // (GLSL: mat4x4 or mat4)
+    KS_GPU_PROGRAM_PARM_TYPE_MAX
+} ksGpuProgramParmType;
+
+typedef enum {
+    KS_GPU_PROGRAM_PARM_ACCESS_READ_ONLY,
+    KS_GPU_PROGRAM_PARM_ACCESS_WRITE_ONLY,
+    KS_GPU_PROGRAM_PARM_ACCESS_READ_WRITE
+} ksGpuProgramParmAccess;
+
+typedef struct {
+    int stageFlags;                 // vertex, fragment and/or compute
+    ksGpuProgramParmType type;      // texture, buffer or push constant
+    ksGpuProgramParmAccess access;  // read and/or write
+    int index;                      // index into ksGpuProgramParmState::parms
+    const char *name;               // GLSL name
+    int binding;                    // OpenGL shader bind points:
+                                    // - texture image unit
+                                    // - image unit
+                                    // - uniform buffer
+                                    // - storage buffer
+                                    // - uniform
+    // Note that each bind point uses its own range of binding indices with each range starting at zero.
+    // However, each range is unique across all stages of a pipeline.
+    // Note that even though multiple targets can be bound to the same texture image unit,
+    // the OpenGL spec disallows rendering from multiple targets using a single texture image unit.
+
+} ksGpuProgramParm;
+
+typedef struct {
+    int numParms;
+    const ksGpuProgramParm *parms;
+    int offsetForIndex[KS_MAX_PROGRAM_PARMS];   // push constant offsets into ksGpuProgramParmState::data based on
+                                             // ksGpuProgramParm::index
+    GLint parmLocations[KS_MAX_PROGRAM_PARMS];  // OpenGL locations
+    GLint parmBindings[KS_MAX_PROGRAM_PARMS];
+    GLint numSampledTextureBindings;
+    GLint numStorageTextureBindings;
+    GLint numUniformBufferBindings;
+    GLint numStorageBufferBindings;
+} ksGpuProgramParmLayout;
+
+static bool ksGpuProgramParm_IsOpaqueBinding(const ksGpuProgramParmType type) {
+    return ((type == KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_SAMPLED)
+                ? true
+                : ((type == KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE)
+                       ? true
+                       : ((type == KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM)
+                              ? true
+                              : ((type == KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE) ? true : false))));
+}
+
+static int ksGpuProgramParm_GetPushConstantSize(const ksGpuProgramParmType type) {
+    static const int parmSize[KS_GPU_PROGRAM_PARM_TYPE_MAX] = {(unsigned int)0,
+                                                               (unsigned int)0,
+                                                               (unsigned int)0,
+                                                               (unsigned int)0,
+                                                               (unsigned int)sizeof(int),
+                                                               (unsigned int)sizeof(int[2]),
+                                                               (unsigned int)sizeof(int[3]),
+                                                               (unsigned int)sizeof(int[4]),
+                                                               (unsigned int)sizeof(float),
+                                                               (unsigned int)sizeof(float[2]),
+                                                               (unsigned int)sizeof(float[3]),
+                                                               (unsigned int)sizeof(float[4]),
+                                                               (unsigned int)sizeof(float[2][2]),
+                                                               (unsigned int)sizeof(float[2][3]),
+                                                               (unsigned int)sizeof(float[2][4]),
+                                                               (unsigned int)sizeof(float[3][2]),
+                                                               (unsigned int)sizeof(float[3][3]),
+                                                               (unsigned int)sizeof(float[3][4]),
+                                                               (unsigned int)sizeof(float[4][2]),
+                                                               (unsigned int)sizeof(float[4][3]),
+                                                               (unsigned int)sizeof(float[4][4])};
+    assert(ARRAY_SIZE(parmSize) == KS_GPU_PROGRAM_PARM_TYPE_MAX);
+    return parmSize[type];
+}
+
+static const char *ksGpuProgramParm_GetPushConstantGlslType(const ksGpuProgramParmType type) {
+    static const char *glslType[KS_GPU_PROGRAM_PARM_TYPE_MAX] = {"",       "",       "",     "",       "int",    "ivec2",  "ivec3",
+                                                                 "ivec4",  "float",  "vec2", "vec3",   "vec4",   "mat2",   "mat2x3",
+                                                                 "mat2x4", "mat3x2", "mat3", "mat3x4", "mat4x2", "mat4x3", "mat4"};
+    assert(ARRAY_SIZE(glslType) == KS_GPU_PROGRAM_PARM_TYPE_MAX);
+    return glslType[type];
+}
+
+static void ksGpuProgramParmLayout_Create(ksGpuContext *context, ksGpuProgramParmLayout *layout, const ksGpuProgramParm *parms,
+                                          const int numParms, const GLuint program) {
+    UNUSED_PARM(context);
+    assert(numParms <= KS_MAX_PROGRAM_PARMS);
+
+    memset(layout, 0, sizeof(ksGpuProgramParmLayout));
+
+    layout->numParms = numParms;
+    layout->parms = parms;
+
+    int offset = 0;
+    memset(layout->offsetForIndex, -1, sizeof(layout->offsetForIndex));
+
+    // Get the texture/buffer/uniform locations and set bindings.
+    for (int i = 0; i < numParms; i++) {
+        if (parms[i].type == KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_SAMPLED) {
+            layout->parmLocations[i] = glGetUniformLocation(program, parms[i].name);
+            assert(layout->parmLocations[i] != -1);
+            if (layout->parmLocations[i] != -1) {
+                // set "texture image unit" binding
+                layout->parmBindings[i] = layout->numSampledTextureBindings++;
+                GL(glProgramUniform1i(program, layout->parmLocations[i], layout->parmBindings[i]));
+            }
+        } else if (parms[i].type == KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE) {
+            layout->parmLocations[i] = glGetUniformLocation(program, parms[i].name);
+            assert(layout->parmLocations[i] != -1);
+            if (layout->parmLocations[i] != -1) {
+                // set "image unit" binding
+                layout->parmBindings[i] = layout->numStorageTextureBindings++;
+#if !defined(OS_ANDROID)
+                // OpenGL ES does not support changing the location after linking, so rely on the layout( binding ) being correct.
+                GL(glProgramUniform1i(program, layout->parmLocations[i], layout->parmBindings[i]));
+#endif
+            }
+        } else if (parms[i].type == KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM) {
+            layout->parmLocations[i] = glGetUniformBlockIndex(program, parms[i].name);
+            assert(layout->parmLocations[i] != -1);
+            if (layout->parmLocations[i] != -1) {
+                // set "uniform block" binding
+                layout->parmBindings[i] = layout->numUniformBufferBindings++;
+                GL(glUniformBlockBinding(program, layout->parmLocations[i], layout->parmBindings[i]));
+            }
+        } else if (parms[i].type == KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE) {
+            layout->parmLocations[i] = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, parms[i].name);
+            assert(layout->parmLocations[i] != -1);
+            if (layout->parmLocations[i] != -1) {
+                // set "shader storage block" binding
+                layout->parmBindings[i] = layout->numStorageBufferBindings++;
+#if !defined(OS_ANDROID)
+                // OpenGL ES does not support glShaderStorageBlockBinding, so rely on the layout( binding ) being correct.
+                GL(glShaderStorageBlockBinding(program, layout->parmLocations[i], layout->parmBindings[i]));
+#endif
+            }
+        } else {
+            layout->parmLocations[i] = glGetUniformLocation(program, parms[i].name);
+            assert(layout->parmLocations[i] != -1);  // The parm is not actually used in the shader?
+            layout->parmBindings[i] = i;
+
+            layout->offsetForIndex[parms[i].index] = offset;
+            offset += ksGpuProgramParm_GetPushConstantSize(parms[i].type);
+        }
+    }
+
+    assert(layout->numSampledTextureBindings <= glGetInteger(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS));
+#if OPENGL_COMPUTE_ENABLED == 1
+    assert(layout->numStorageTextureBindings <= glGetInteger(GL_MAX_IMAGE_UNITS));
+    assert(layout->numUniformBufferBindings <= glGetInteger(GL_MAX_UNIFORM_BUFFER_BINDINGS));
+    assert(layout->numStorageBufferBindings <= glGetInteger(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS));
+#endif
+}
+
+static void ksGpuProgramParmLayout_Destroy(ksGpuContext *context, ksGpuProgramParmLayout *layout) {
+    UNUSED_PARM(context);
+    UNUSED_PARM(layout);
+}

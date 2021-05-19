@@ -1142,7 +1142,7 @@ static bool GlCheckExtension(const char *extension) {
     GL(const GLint numExtensions = glGetInteger(GL_NUM_EXTENSIONS));
     for (int i = 0; i < numExtensions; i++) {
         GL(const GLubyte *string = glGetStringi(GL_EXTENSIONS, i));
-        if (strcmp((const char *)string, extension) == 0) {
+        if (string && strcmp((const char *)string, extension) == 0) {
             return true;
         }
     }

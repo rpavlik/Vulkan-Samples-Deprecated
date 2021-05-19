@@ -11239,7 +11239,7 @@ static void ksBarGraph_Create( ksGpuContext * context, ksBarGraph * barGraph, ks
 	for ( int i = 0; i < numBars * numStacked; i++ )
 	{
 		barGraph->barValues[i] = 0.0f;
-		barGraph->barColors[i] = colorGreen;
+		barGraph->barColors[i] = ksColorGreen;
 	}
 
 	barGraph->backgroundColor = *backgroundColor;
@@ -11552,11 +11552,11 @@ enum
 
 static const ksVector4f * profileTimeBarColors[] =
 {
-	&colorPurple,
-	&colorGreen,
-	&colorYellow,
-	&colorBlue,
-	&colorRed
+	&ksColorPurple,
+	&ksColorGreen,
+	&ksColorYellow,
+	&ksColorBlue,
+	&ksColorRed
 };
 
 static void ksBarGraph_CreateVirtualRect( ksGpuContext * context, ksBarGraph * barGraph, ksGpuRenderPass * renderPass,
@@ -11570,30 +11570,30 @@ static void ksTimeWarpBarGraphs_Create( ksGpuContext * context, ksTimeWarpBarGra
 {
 	bargraphs->barGraphState = BAR_GRAPH_VISIBLE;
 
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->applicationFrameRateGraph, renderPass, &eyeTextureFrameRateBarGraphRect, 64, 1, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->timeWarpFrameRateGraph, renderPass, &timeWarpFrameRateBarGraphRect, 64, 1, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->frameCpuTimeBarGraph, renderPass, &frameCpuTimeBarGraphRect, 64, PROFILE_TIME_MAX, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->frameGpuTimeBarGraph, renderPass, &frameGpuTimeBarGraphRect, 64, PROFILE_TIME_MAX, &colorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->applicationFrameRateGraph, renderPass, &eyeTextureFrameRateBarGraphRect, 64, 1, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->timeWarpFrameRateGraph, renderPass, &timeWarpFrameRateBarGraphRect, 64, 1, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->frameCpuTimeBarGraph, renderPass, &frameCpuTimeBarGraphRect, 64, PROFILE_TIME_MAX, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->frameGpuTimeBarGraph, renderPass, &frameGpuTimeBarGraphRect, 64, PROFILE_TIME_MAX, &ksColorDarkGrey );
 
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->multiViewBarGraph, renderPass, &multiViewBarGraphRect, 1, 1, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->correctChromaticAberrationBarGraph, renderPass, &correctChromaticAberrationBarGraphRect, 1, 1, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->timeWarpImplementationBarGraph, renderPass, &timeWarpImplementationBarGraphRect, 1, 1, &colorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->multiViewBarGraph, renderPass, &multiViewBarGraphRect, 1, 1, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->correctChromaticAberrationBarGraph, renderPass, &correctChromaticAberrationBarGraphRect, 1, 1, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->timeWarpImplementationBarGraph, renderPass, &timeWarpImplementationBarGraphRect, 1, 1, &ksColorDarkGrey );
 
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->displayResolutionLevelBarGraph, renderPass, &displayResolutionLevelBarGraphRect, 1, 4, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->eyeImageResolutionLevelBarGraph, renderPass, &eyeImageResolutionLevelBarGraphRect, 1, 4, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->eyeImageSamplesLevelBarGraph, renderPass, &eyeImageSamplesLevelBarGraphRect, 1, 4, &colorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->displayResolutionLevelBarGraph, renderPass, &displayResolutionLevelBarGraphRect, 1, 4, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->eyeImageResolutionLevelBarGraph, renderPass, &eyeImageResolutionLevelBarGraphRect, 1, 4, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->eyeImageSamplesLevelBarGraph, renderPass, &eyeImageSamplesLevelBarGraphRect, 1, 4, &ksColorDarkGrey );
 
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->sceneDrawCallLevelBarGraph, renderPass, &sceneDrawCallLevelBarGraphRect, 1, 4, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->sceneTriangleLevelBarGraph, renderPass, &sceneTriangleLevelBarGraphRect, 1, 4, &colorDarkGrey );
-	ksBarGraph_CreateVirtualRect( context, &bargraphs->sceneFragmentLevelBarGraph, renderPass, &sceneFragmentLevelBarGraphRect, 1, 4, &colorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->sceneDrawCallLevelBarGraph, renderPass, &sceneDrawCallLevelBarGraphRect, 1, 4, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->sceneTriangleLevelBarGraph, renderPass, &sceneTriangleLevelBarGraphRect, 1, 4, &ksColorDarkGrey );
+	ksBarGraph_CreateVirtualRect( context, &bargraphs->sceneFragmentLevelBarGraph, renderPass, &sceneFragmentLevelBarGraphRect, 1, 4, &ksColorDarkGrey );
 
-	ksBarGraph_AddBar( &bargraphs->displayResolutionLevelBarGraph, 0, 0.25f, &colorBlue, false );
-	ksBarGraph_AddBar( &bargraphs->eyeImageResolutionLevelBarGraph, 0, 0.25f, &colorBlue, false );
-	ksBarGraph_AddBar( &bargraphs->eyeImageSamplesLevelBarGraph, 0, 0.25f, &colorBlue, false );
+	ksBarGraph_AddBar( &bargraphs->displayResolutionLevelBarGraph, 0, 0.25f, &ksColorBlue, false );
+	ksBarGraph_AddBar( &bargraphs->eyeImageResolutionLevelBarGraph, 0, 0.25f, &ksColorBlue, false );
+	ksBarGraph_AddBar( &bargraphs->eyeImageSamplesLevelBarGraph, 0, 0.25f, &ksColorBlue, false );
 
-	ksBarGraph_AddBar( &bargraphs->sceneDrawCallLevelBarGraph, 0, 0.25f, &colorBlue, false );
-	ksBarGraph_AddBar( &bargraphs->sceneTriangleLevelBarGraph, 0, 0.25f, &colorBlue, false );
-	ksBarGraph_AddBar( &bargraphs->sceneFragmentLevelBarGraph, 0, 0.25f, &colorBlue, false );
+	ksBarGraph_AddBar( &bargraphs->sceneDrawCallLevelBarGraph, 0, 0.25f, &ksColorBlue, false );
+	ksBarGraph_AddBar( &bargraphs->sceneTriangleLevelBarGraph, 0, 0.25f, &ksColorBlue, false );
+	ksBarGraph_AddBar( &bargraphs->sceneFragmentLevelBarGraph, 0, 0.25f, &ksColorBlue, false );
 
 	ksGpuTimer_Create( context, &bargraphs->barGraphTimer );
 }
@@ -13576,36 +13576,36 @@ static void ksTimeWarp_SetImplementation( ksTimeWarp * timeWarp, const ksTimeWar
 {
 	timeWarp->implementation = implementation;
 	const float delta = ( timeWarp->implementation == TIMEWARP_IMPLEMENTATION_GRAPHICS ) ? 0.0f : 1.0f;
-	ksBarGraph_AddBar( &timeWarp->bargraphs.timeWarpImplementationBarGraph, 0, delta, &colorRed, false );
+	ksBarGraph_AddBar( &timeWarp->bargraphs.timeWarpImplementationBarGraph, 0, delta, &ksColorRed, false );
 }
 
 static void ksTimeWarp_CycleImplementation( ksTimeWarp * timeWarp )
 {
 	timeWarp->implementation = (ksTimeWarpImplementation)( ( timeWarp->implementation + 1 ) % TIMEWARP_IMPLEMENTATION_MAX );
 	const float delta = ( timeWarp->implementation == TIMEWARP_IMPLEMENTATION_GRAPHICS ) ? 0.0f : 1.0f;
-	ksBarGraph_AddBar( &timeWarp->bargraphs.timeWarpImplementationBarGraph, 0, delta, &colorRed, false );
+	ksBarGraph_AddBar( &timeWarp->bargraphs.timeWarpImplementationBarGraph, 0, delta, &ksColorRed, false );
 }
 
 static void ksTimeWarp_SetChromaticAberrationCorrection( ksTimeWarp * timeWarp, const bool set )
 {
 	timeWarp->correctChromaticAberration = set;
-	ksBarGraph_AddBar( &timeWarp->bargraphs.correctChromaticAberrationBarGraph, 0, timeWarp->correctChromaticAberration ? 1.0f : 0.0f, &colorRed, false );
+	ksBarGraph_AddBar( &timeWarp->bargraphs.correctChromaticAberrationBarGraph, 0, timeWarp->correctChromaticAberration ? 1.0f : 0.0f, &ksColorRed, false );
 }
 
 static void ksTimeWarp_ToggleChromaticAberrationCorrection( ksTimeWarp * timeWarp )
 {
 	timeWarp->correctChromaticAberration = !timeWarp->correctChromaticAberration;
-	ksBarGraph_AddBar( &timeWarp->bargraphs.correctChromaticAberrationBarGraph, 0, timeWarp->correctChromaticAberration ? 1.0f : 0.0f, &colorRed, false );
+	ksBarGraph_AddBar( &timeWarp->bargraphs.correctChromaticAberrationBarGraph, 0, timeWarp->correctChromaticAberration ? 1.0f : 0.0f, &ksColorRed, false );
 }
 
 static void ksTimeWarp_SetMultiView( ksTimeWarp * timeWarp, const bool enabled )
 {
-	ksBarGraph_AddBar( &timeWarp->bargraphs.multiViewBarGraph, 0, enabled ? 1.0f : 0.0f, &colorRed, false );
+	ksBarGraph_AddBar( &timeWarp->bargraphs.multiViewBarGraph, 0, enabled ? 1.0f : 0.0f, &ksColorRed, false );
 }
 
 static void ksTimeWarp_SetDisplayResolutionLevel( ksTimeWarp * timeWarp, const int level )
 {
-	const ksVector4f * levelColor[4] = { &colorBlue, &colorGreen, &colorYellow, &colorRed };
+	const ksVector4f * levelColor[4] = { &ksColorBlue, &ksColorGreen, &ksColorYellow, &ksColorRed };
 	for ( int i = 0; i < 4; i++ )
 	{
 		ksBarGraph_AddBar( &timeWarp->bargraphs.displayResolutionLevelBarGraph, i, ( i <= level ) ? 0.25f : 0.0f, levelColor[i], false );
@@ -13614,7 +13614,7 @@ static void ksTimeWarp_SetDisplayResolutionLevel( ksTimeWarp * timeWarp, const i
 
 static void ksTimeWarp_SetEyeImageResolutionLevel( ksTimeWarp * timeWarp, const int level )
 {
-	const ksVector4f * levelColor[4] = { &colorBlue, &colorGreen, &colorYellow, &colorRed };
+	const ksVector4f * levelColor[4] = { &ksColorBlue, &ksColorGreen, &ksColorYellow, &ksColorRed };
 	for ( int i = 0; i < 4; i++ )
 	{
 		ksBarGraph_AddBar( &timeWarp->bargraphs.eyeImageResolutionLevelBarGraph, i, ( i <= level ) ? 0.25f : 0.0f, levelColor[i], false );
@@ -13623,7 +13623,7 @@ static void ksTimeWarp_SetEyeImageResolutionLevel( ksTimeWarp * timeWarp, const 
 
 static void ksTimeWarp_SetEyeImageSamplesLevel( ksTimeWarp * timeWarp, const int level )
 {
-	const ksVector4f * levelColor[4] = { &colorBlue, &colorGreen, &colorYellow, &colorRed };
+	const ksVector4f * levelColor[4] = { &ksColorBlue, &ksColorGreen, &ksColorYellow, &ksColorRed };
 	for ( int i = 0; i < 4; i++ )
 	{
 		ksBarGraph_AddBar( &timeWarp->bargraphs.eyeImageSamplesLevelBarGraph, i, ( i <= level ) ? 0.25f : 0.0f, levelColor[i], false );
@@ -13632,7 +13632,7 @@ static void ksTimeWarp_SetEyeImageSamplesLevel( ksTimeWarp * timeWarp, const int
 
 static void ksTimeWarp_SetDrawCallLevel( ksTimeWarp * timeWarp, const int level )
 {
-	const ksVector4f * levelColor[4] = { &colorBlue, &colorGreen, &colorYellow, &colorRed };
+	const ksVector4f * levelColor[4] = { &ksColorBlue, &ksColorGreen, &ksColorYellow, &ksColorRed };
 	for ( int i = 0; i < 4; i++ )
 	{
 		ksBarGraph_AddBar( &timeWarp->bargraphs.sceneDrawCallLevelBarGraph, i, ( i <= level ) ? 0.25f : 0.0f, levelColor[i], false );
@@ -13641,7 +13641,7 @@ static void ksTimeWarp_SetDrawCallLevel( ksTimeWarp * timeWarp, const int level 
 
 static void ksTimeWarp_SetTriangleLevel( ksTimeWarp * timeWarp, const int level )
 {
-	const ksVector4f * levelColor[4] = { &colorBlue, &colorGreen, &colorYellow, &colorRed };
+	const ksVector4f * levelColor[4] = { &ksColorBlue, &ksColorGreen, &ksColorYellow, &ksColorRed };
 	for ( int i = 0; i < 4; i++ )
 	{
 		ksBarGraph_AddBar( &timeWarp->bargraphs.sceneTriangleLevelBarGraph, i, ( i <= level ) ? 0.25f : 0.0f, levelColor[i], false );
@@ -13650,7 +13650,7 @@ static void ksTimeWarp_SetTriangleLevel( ksTimeWarp * timeWarp, const int level 
 
 static void ksTimeWarp_SetFragmentLevel( ksTimeWarp * timeWarp, const int level )
 {
-	const ksVector4f * levelColor[4] = { &colorBlue, &colorGreen, &colorYellow, &colorRed };
+	const ksVector4f * levelColor[4] = { &ksColorBlue, &ksColorGreen, &ksColorYellow, &ksColorRed };
 	for ( int i = 0; i < 4; i++ )
 	{
 		ksBarGraph_AddBar( &timeWarp->bargraphs.sceneFragmentLevelBarGraph, i, ( i <= level ) ? 0.25f : 0.0f, levelColor[i], false );
@@ -13783,8 +13783,8 @@ static void ksTimeWarp_Render( ksTimeWarp * timeWarp )
 	// Update the bar graphs if not paused.
 	if ( timeWarp->bargraphs.barGraphState == BAR_GRAPH_VISIBLE )
 	{
-		const ksVector4f * applicationFrameRateColor = ( eyeTexturesFrameRate > timeWarp->refreshRate - 0.5f ) ? &colorPurple : &colorRed;
-		const ksVector4f * timeWarpFrameRateColor = ( timeWarpFrameRate > timeWarp->refreshRate - 0.5f ) ? &colorGreen : &colorRed;
+		const ksVector4f * applicationFrameRateColor = ( eyeTexturesFrameRate > timeWarp->refreshRate - 0.5f ) ? &ksColorPurple : &ksColorRed;
+		const ksVector4f * timeWarpFrameRateColor = ( timeWarpFrameRate > timeWarp->refreshRate - 0.5f ) ? &ksColorGreen : &ksColorRed;
 
 		ksBarGraph_AddBar( &timeWarp->bargraphs.applicationFrameRateGraph, 0, eyeTexturesFrameRate / timeWarp->refreshRate, applicationFrameRateColor, true );
 		ksBarGraph_AddBar( &timeWarp->bargraphs.timeWarpFrameRateGraph, 0, timeWarpFrameRate / timeWarp->refreshRate, timeWarpFrameRateColor, true );
@@ -14646,10 +14646,10 @@ bool RenderScene( ksStartupSettings * startupSettings )
 	ksGpuTimer_Create( &window.context, &timer );
 
 	ksBarGraph frameCpuTimeBarGraph;
-	ksBarGraph_CreateVirtualRect( &window.context, &frameCpuTimeBarGraph, &renderPass, &frameCpuTimeBarGraphRect, 64, 1, &colorDarkGrey );
+	ksBarGraph_CreateVirtualRect( &window.context, &frameCpuTimeBarGraph, &renderPass, &frameCpuTimeBarGraphRect, 64, 1, &ksColorDarkGrey );
 
 	ksBarGraph frameGpuTimeBarGraph;
-	ksBarGraph_CreateVirtualRect( &window.context, &frameGpuTimeBarGraph, &renderPass, &frameGpuTimeBarGraphRect, 64, 1, &colorDarkGrey );
+	ksBarGraph_CreateVirtualRect( &window.context, &frameGpuTimeBarGraph, &renderPass, &frameGpuTimeBarGraphRect, 64, 1, &ksColorDarkGrey );
 
 	ksSceneSettings sceneSettings;
 	ksSceneSettings_Init( &window.context, &sceneSettings );
@@ -14837,8 +14837,8 @@ bool RenderScene( ksStartupSettings * startupSettings )
 
 			ksFrameLog_EndFrame( sceneCpuTime, sceneGpuTime, KS_GPU_TIMER_FRAMES_DELAYED );
 
-			ksBarGraph_AddBar( &frameCpuTimeBarGraph, 0, sceneCpuTime * window.windowRefreshRate * 1e-9f, &colorGreen, true );
-			ksBarGraph_AddBar( &frameGpuTimeBarGraph, 0, sceneGpuTime * window.windowRefreshRate * 1e-9f, &colorGreen, true );
+			ksBarGraph_AddBar( &frameCpuTimeBarGraph, 0, sceneCpuTime * window.windowRefreshRate * 1e-9f, &ksColorGreen, true );
+			ksBarGraph_AddBar( &frameGpuTimeBarGraph, 0, sceneGpuTime * window.windowRefreshRate * 1e-9f, &ksColorGreen, true );
 
 			ksGpuWindow_SwapBuffers( &window );
 		}

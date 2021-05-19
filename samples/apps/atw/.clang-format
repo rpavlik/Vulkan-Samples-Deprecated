@@ -7,4 +7,5 @@ BasedOnStyle: Google
 IndentWidth: 4
 ColumnLimit: 132
 SortIncludes: false
+IndentPPDirectives: AfterHash
 ...

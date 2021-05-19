@@ -4707,7 +4707,20 @@ static bool ksGpuTexture_CreateInternal(ksGpuContext *context, ksGpuTexture *tex
                     glDataType = GL_BYTE;
                     break;
                 }
-
+#if defined(GL_SR8)
+                case GL_SR8: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned char);
+                    glFormat = GL_RED;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+                case GL_SRG8: {
+                    mipSize = mipWidth * mipHeight * mipDepth * 2 * sizeof(unsigned char);
+                    glFormat = GL_RG;
+                    glDataType = GL_UNSIGNED_BYTE;
+                    break;
+                }
+#elif defined(GL_SR8_EXT)
                 case GL_SR8_EXT: {
                     mipSize = mipWidth * mipHeight * mipDepth * 1 * sizeof(unsigned char);
                     glFormat = GL_RED;
@@ -4720,6 +4733,7 @@ static bool ksGpuTexture_CreateInternal(ksGpuContext *context, ksGpuTexture *tex
                     glDataType = GL_UNSIGNED_BYTE;
                     break;
                 }
+#endif
                 case GL_SRGB8_ALPHA8: {
                     mipSize = mipWidth * mipHeight * mipDepth * 4 * sizeof(unsigned char);
                     glFormat = GL_RGBA;
@@ -6397,97 +6411,7 @@ ksGpuTexture *ksGpuFramebuffer_GetColorTexture(const ksGpuFramebuffer *framebuff
     return &framebuffer->colorTextures[framebuffer->currentBuffer];
 }
 
-#define KS_MAX_PROGRAM_PARMS 16
-
-typedef enum {
-    KS_GPU_PROGRAM_STAGE_FLAG_VERTEX = BIT(0),
-    KS_GPU_PROGRAM_STAGE_FLAG_FRAGMENT = BIT(1),
-    KS_GPU_PROGRAM_STAGE_FLAG_COMPUTE = BIT(2),
-    KS_GPU_PROGRAM_STAGE_MAX = 3
-} ksGpuProgramStageFlags;
-
-typedef enum {
-    KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_SAMPLED,    // texture plus sampler bound together        (GLSL: sampler*, isampler*,
-                                                 // usampler*)
-    KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE,    // not sampled, direct read-write storage    (GLSL: image*, iimage*, uimage*)
-    KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM,     // read-only uniform buffer                    (GLSL: uniform)
-    KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE,     // read-write storage buffer                (GLSL: buffer)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT,  // int                                        (GLSL:
-                                                 // int)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR2,      // int[2]                                    (GLSL:
-                                                             // ivec2)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR3,      // int[3]                                    (GLSL:
-                                                             // ivec3)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR4,      // int[4]                                    (GLSL:
-                                                             // ivec4)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT,            // float                                    (GLSL:
-                                                             // float)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR2,    // float[2]                                    (GLSL:
-                                                             // vec2)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR3,    // float[3]                                    (GLSL:
-                                                             // vec3)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR4,    // float[4]                                    (GLSL:
-                                                             // vec4)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X2,  // float[2][2]
-                                                             // (GLSL: mat2x2 or mat2)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X3,  // float[2][3]
-                                                             // (GLSL: mat2x3)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X4,  // float[2][4]
-                                                             // (GLSL: mat2x4)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X2,  // float[3][2]
-                                                             // (GLSL: mat3x2)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X3,  // float[3][3]
-                                                             // (GLSL: mat3x3 or mat3)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X4,  // float[3][4]
-                                                             // (GLSL: mat3x4)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X2,  // float[4][2]
-                                                             // (GLSL: mat4x2)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X3,  // float[4][3]
-                                                             // (GLSL: mat4x3)
-    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X4,  // float[4][4]
-                                                             // (GLSL: mat4x4 or mat4)
-    KS_GPU_PROGRAM_PARM_TYPE_MAX
-} ksGpuProgramParmType;
-
-typedef enum {
-    KS_GPU_PROGRAM_PARM_ACCESS_READ_ONLY,
-    KS_GPU_PROGRAM_PARM_ACCESS_WRITE_ONLY,
-    KS_GPU_PROGRAM_PARM_ACCESS_READ_WRITE
-} ksGpuProgramParmAccess;
-
-typedef struct {
-    int stageFlags;                 // vertex, fragment and/or compute
-    ksGpuProgramParmType type;      // texture, buffer or push constant
-    ksGpuProgramParmAccess access;  // read and/or write
-    int index;                      // index into ksGpuProgramParmState::parms
-    const char *name;               // GLSL name
-    int binding;                    // OpenGL shader bind points:
-                                    // - texture image unit
-                                    // - image unit
-                                    // - uniform buffer
-                                    // - storage buffer
-                                    // - uniform
-    // Note that each bind point uses its own range of binding indices with each range starting at zero.
-    // However, each range is unique across all stages of a pipeline.
-    // Note that even though multiple targets can be bound to the same texture image unit,
-    // the OpenGL spec disallows rendering from multiple targets using a single texture image unit.
-
-} ksGpuProgramParm;
-
-typedef struct {
-    int numParms;
-    const ksGpuProgramParm *parms;
-    int offsetForIndex[KS_MAX_PROGRAM_PARMS];   // push constant offsets into ksGpuProgramParmState::data based on
-                                             // ksGpuProgramParm::index
-    GLint parmLocations[KS_MAX_PROGRAM_PARMS];  // OpenGL locations
-    GLint parmBindings[KS_MAX_PROGRAM_PARMS];
-    GLint numSampledTextureBindings;
-    GLint numStorageTextureBindings;
-    GLint numUniformBufferBindings;
-    GLint numStorageBufferBindings;
-} ksGpuProgramParmLayout;
-
-static bool ksGpuProgramParm_IsOpaqueBinding(const ksGpuProgramParmType type) {
+bool ksGpuProgramParm_IsOpaqueBinding(const ksGpuProgramParmType type) {
     return ((type == KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_SAMPLED)
                 ? true
                 : ((type == KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE)
@@ -6497,7 +6421,7 @@ static bool ksGpuProgramParm_IsOpaqueBinding(const ksGpuProgramParmType type) {
                               : ((type == KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE) ? true : false))));
 }
 
-static int ksGpuProgramParm_GetPushConstantSize(const ksGpuProgramParmType type) {
+int ksGpuProgramParm_GetPushConstantSize(const ksGpuProgramParmType type) {
     static const int parmSize[KS_GPU_PROGRAM_PARM_TYPE_MAX] = {(unsigned int)0,
                                                                (unsigned int)0,
                                                                (unsigned int)0,
@@ -6523,7 +6447,7 @@ static int ksGpuProgramParm_GetPushConstantSize(const ksGpuProgramParmType type)
     return parmSize[type];
 }
 
-static const char *ksGpuProgramParm_GetPushConstantGlslType(const ksGpuProgramParmType type) {
+const char *ksGpuProgramParm_GetPushConstantGlslType(const ksGpuProgramParmType type) {
     static const char *glslType[KS_GPU_PROGRAM_PARM_TYPE_MAX] = {"",       "",       "",     "",       "int",    "ivec2",  "ivec3",
                                                                  "ivec4",  "float",  "vec2", "vec3",   "vec4",   "mat2",   "mat2x3",
                                                                  "mat2x4", "mat3x2", "mat3", "mat3x4", "mat4x2", "mat4x3", "mat4"};
@@ -6531,8 +6455,8 @@ static const char *ksGpuProgramParm_GetPushConstantGlslType(const ksGpuProgramPa
     return glslType[type];
 }
 
-static void ksGpuProgramParmLayout_Create(ksGpuContext *context, ksGpuProgramParmLayout *layout, const ksGpuProgramParm *parms,
-                                          const int numParms, const GLuint program) {
+void ksGpuProgramParmLayout_Create(ksGpuContext *context, ksGpuProgramParmLayout *layout, const ksGpuProgramParm *parms,
+                                   const int numParms, const GLuint program) {
     UNUSED_PARM(context);
     assert(numParms <= KS_MAX_PROGRAM_PARMS);
 
@@ -6602,7 +6526,467 @@ static void ksGpuProgramParmLayout_Create(ksGpuContext *context, ksGpuProgramPar
 #endif
 }
 
-static void ksGpuProgramParmLayout_Destroy(ksGpuContext *context, ksGpuProgramParmLayout *layout) {
+void ksGpuProgramParmLayout_Destroy(ksGpuContext *context, ksGpuProgramParmLayout *layout) {
     UNUSED_PARM(context);
     UNUSED_PARM(layout);
+}
+bool ksGpuGraphicsProgram_Create(ksGpuContext *context, ksGpuGraphicsProgram *program, const void *vertexSourceData,
+                                 const size_t vertexSourceSize, const void *fragmentSourceData, const size_t fragmentSourceSize,
+                                 const ksGpuProgramParm *parms, const int numParms, const ksGpuVertexAttribute *vertexLayout,
+                                 const int vertexAttribsFlags) {
+    UNUSED_PARM(vertexSourceSize);
+    UNUSED_PARM(fragmentSourceSize);
+
+    program->vertexAttribsFlags = vertexAttribsFlags;
+
+    GLint r;
+    GL(program->vertexShader = glCreateShader(GL_VERTEX_SHADER));
+    GL(glShaderSource(program->vertexShader, 1, (const char **)&vertexSourceData, 0));
+    GL(glCompileShader(program->vertexShader));
+    GL(glGetShaderiv(program->vertexShader, GL_COMPILE_STATUS, &r));
+    if (r == GL_FALSE) {
+        GLchar msg[4096];
+        GLsizei length;
+        GL(glGetShaderInfoLog(program->vertexShader, sizeof(msg), &length, msg));
+        Error("%s\nlength=%d\n%s\n", (const char *)vertexSourceData, length, msg);
+        return false;
+    }
+
+    GL(program->fragmentShader = glCreateShader(GL_FRAGMENT_SHADER));
+    GL(glShaderSource(program->fragmentShader, 1, (const char **)&fragmentSourceData, 0));
+    GL(glCompileShader(program->fragmentShader));
+    GL(glGetShaderiv(program->fragmentShader, GL_COMPILE_STATUS, &r));
+    if (r == GL_FALSE) {
+        GLchar msg[4096];
+        GLsizei length;
+        GL(glGetShaderInfoLog(program->fragmentShader, sizeof(msg), &length, msg));
+        Error("%s\nlength=%d\n%s\n", (const char *)fragmentSourceData, length, msg);
+        return false;
+    }
+
+    GL(program->program = glCreateProgram());
+    GL(glAttachShader(program->program, program->vertexShader));
+    GL(glAttachShader(program->program, program->fragmentShader));
+
+    // Bind the vertex attribute locations before linking.
+    GLuint location = 0;
+    for (int i = 0; vertexLayout[i].attributeFlag != 0; i++) {
+        if ((vertexLayout[i].attributeFlag & vertexAttribsFlags) != 0) {
+            GL(glBindAttribLocation(program->program, location, vertexLayout[i].name));
+            location += vertexLayout[i].locationCount;
+        }
+    }
+
+    GL(glLinkProgram(program->program));
+    GL(glGetProgramiv(program->program, GL_LINK_STATUS, &r));
+    if (r == GL_FALSE) {
+        GLchar msg[4096];
+        GL(glGetProgramInfoLog(program->program, sizeof(msg), 0, msg));
+        Error("Linking program failed: %s\n", msg);
+        return false;
+    }
+
+    // Verify the attributes.
+    for (int i = 0; vertexLayout[i].attributeFlag != 0; i++) {
+        if ((vertexLayout[i].attributeFlag & vertexAttribsFlags) != 0) {
+            assert(glGetAttribLocation(program->program, vertexLayout[i].name) != -1);
+        }
+    }
+
+    ksGpuProgramParmLayout_Create(context, &program->parmLayout, parms, numParms, program->program);
+
+    // Calculate a hash of the vertex and fragment program source.
+    ksStringHash_Init(&program->hash);
+    ksStringHash_Update(&program->hash, (const char *)vertexSourceData);
+    ksStringHash_Update(&program->hash, (const char *)fragmentSourceData);
+
+    return true;
+}
+void ksGpuGraphicsProgram_Destroy(ksGpuContext *context, ksGpuGraphicsProgram *program) {
+    ksGpuProgramParmLayout_Destroy(context, &program->parmLayout);
+    if (program->program != 0) {
+        GL(glDeleteProgram(program->program));
+        program->program = 0;
+    }
+    if (program->vertexShader != 0) {
+        GL(glDeleteShader(program->vertexShader));
+        program->vertexShader = 0;
+    }
+    if (program->fragmentShader != 0) {
+        GL(glDeleteShader(program->fragmentShader));
+        program->fragmentShader = 0;
+    }
+}
+
+bool ksGpuComputeProgram_Create(ksGpuContext *context, ksGpuComputeProgram *program, const void *computeSourceData,
+                                const size_t computeSourceSize, const ksGpuProgramParm *parms, const int numParms) {
+    UNUSED_PARM(context);
+    UNUSED_PARM(computeSourceSize);
+
+    GLint r;
+    GL(program->computeShader = glCreateShader(GL_COMPUTE_SHADER));
+    GL(glShaderSource(program->computeShader, 1, (const char **)&computeSourceData, 0));
+    GL(glCompileShader(program->computeShader));
+    GL(glGetShaderiv(program->computeShader, GL_COMPILE_STATUS, &r));
+    if (r == GL_FALSE) {
+        GLchar msg[4096];
+        GL(glGetShaderInfoLog(program->computeShader, sizeof(msg), 0, msg));
+        Error("%s\n%s\n", (const char *)computeSourceData, msg);
+        return false;
+    }
+
+    GL(program->program = glCreateProgram());
+    GL(glAttachShader(program->program, program->computeShader));
+
+    GL(glLinkProgram(program->program));
+    GL(glGetProgramiv(program->program, GL_LINK_STATUS, &r));
+    if (r == GL_FALSE) {
+        GLchar msg[4096];
+        GL(glGetProgramInfoLog(program->program, sizeof(msg), 0, msg));
+        Error("Linking program failed: %s\n", msg);
+        return false;
+    }
+
+    ksGpuProgramParmLayout_Create(context, &program->parmLayout, parms, numParms, program->program);
+
+    // Calculate a hash of the shader source.
+    ksStringHash_Init(&program->hash);
+    ksStringHash_Update(&program->hash, (const char *)computeSourceData);
+
+    return true;
+}
+void ksGpuComputeProgram_Destroy(ksGpuContext *context, ksGpuComputeProgram *program) {
+    ksGpuProgramParmLayout_Destroy(context, &program->parmLayout);
+
+    if (program->program != 0) {
+        GL(glDeleteProgram(program->program));
+        program->program = 0;
+    }
+    if (program->computeShader != 0) {
+        GL(glDeleteShader(program->computeShader));
+        program->computeShader = 0;
+    }
+}
+
+void ksGpuGraphicsPipelineParms_Init(ksGpuGraphicsPipelineParms *parms) {
+    parms->rop.blendEnable = false;
+    parms->rop.redWriteEnable = true;
+    parms->rop.blueWriteEnable = true;
+    parms->rop.greenWriteEnable = true;
+    parms->rop.alphaWriteEnable = false;
+    parms->rop.depthTestEnable = true;
+    parms->rop.depthWriteEnable = true;
+    parms->rop.frontFace = KS_GPU_FRONT_FACE_COUNTER_CLOCKWISE;
+    parms->rop.cullMode = KS_GPU_CULL_MODE_BACK;
+    parms->rop.depthCompare = KS_GPU_COMPARE_OP_LESS_OR_EQUAL;
+    parms->rop.blendColor.x = 0.0f;
+    parms->rop.blendColor.y = 0.0f;
+    parms->rop.blendColor.z = 0.0f;
+    parms->rop.blendColor.w = 0.0f;
+    parms->rop.blendOpColor = KS_GPU_BLEND_OP_ADD;
+    parms->rop.blendSrcColor = KS_GPU_BLEND_FACTOR_ONE;
+    parms->rop.blendDstColor = KS_GPU_BLEND_FACTOR_ZERO;
+    parms->rop.blendOpAlpha = KS_GPU_BLEND_OP_ADD;
+    parms->rop.blendSrcAlpha = KS_GPU_BLEND_FACTOR_ONE;
+    parms->rop.blendDstAlpha = KS_GPU_BLEND_FACTOR_ZERO;
+    parms->renderPass = NULL;
+    parms->program = NULL;
+    parms->geometry = NULL;
+}
+
+static void InitVertexAttributes(const bool instance, const ksGpuVertexAttribute *vertexLayout, const int numAttribs,
+                                 const int storedAttribsFlags, const int usedAttribsFlags, GLuint *attribLocationCount) {
+    size_t offset = 0;
+    for (int i = 0; vertexLayout[i].attributeFlag != 0; i++) {
+        const ksGpuVertexAttribute *v = &vertexLayout[i];
+        if ((v->attributeFlag & storedAttribsFlags) != 0) {
+            if ((v->attributeFlag & usedAttribsFlags) != 0) {
+                const size_t attribLocationSize = v->attributeSize / v->locationCount;
+                const size_t attribStride = v->attributeSize;
+                for (int location = 0; location < v->locationCount; location++) {
+                    GL(glEnableVertexAttribArray(*attribLocationCount + location));
+                    GL(glVertexAttribPointer(*attribLocationCount + location, v->attributeFormat >> 16, v->attributeFormat & 0xFFFF,
+                                             GL_FALSE, (GLsizei)attribStride, (void *)(offset + location * attribLocationSize)));
+                    GL(glVertexAttribDivisor(*attribLocationCount + location, instance ? 1 : 0));
+                }
+                *attribLocationCount += v->locationCount;
+            }
+            offset += numAttribs * v->attributeSize;
+        }
+    }
+}
+
+bool ksGpuGraphicsPipeline_Create(ksGpuContext *context, ksGpuGraphicsPipeline *pipeline, const ksGpuGraphicsPipelineParms *parms) {
+    UNUSED_PARM(context);
+
+    // Make sure the geometry provides all the attributes needed by the program.
+    assert(((parms->geometry->vertexAttribsFlags | parms->geometry->instanceAttribsFlags) & parms->program->vertexAttribsFlags) ==
+           parms->program->vertexAttribsFlags);
+
+    memset(pipeline, 0, sizeof(ksGpuGraphicsPipeline));
+
+    pipeline->rop = parms->rop;
+    pipeline->program = parms->program;
+    pipeline->geometry = parms->geometry;
+
+    assert(pipeline->vertexArrayObject == 0);
+
+    GL(glGenVertexArrays(1, &pipeline->vertexArrayObject));
+    GL(glBindVertexArray(pipeline->vertexArrayObject));
+
+    GLuint attribLocationCount = 0;
+
+    GL(glBindBuffer(parms->geometry->vertexBuffer.target, parms->geometry->vertexBuffer.buffer));
+    InitVertexAttributes(false, parms->geometry->layout, parms->geometry->vertexCount, parms->geometry->vertexAttribsFlags,
+                         parms->program->vertexAttribsFlags, &attribLocationCount);
+
+    if (parms->geometry->instanceBuffer.buffer != 0) {
+        GL(glBindBuffer(parms->geometry->instanceBuffer.target, parms->geometry->instanceBuffer.buffer));
+        InitVertexAttributes(true, parms->geometry->layout, parms->geometry->instanceCount, parms->geometry->instanceAttribsFlags,
+                             parms->program->vertexAttribsFlags, &attribLocationCount);
+    }
+
+    GL(glBindBuffer(parms->geometry->indexBuffer.target, parms->geometry->indexBuffer.buffer));
+
+    GL(glBindVertexArray(0));
+
+    return true;
+}
+
+void ksGpuGraphicsPipeline_Destroy(ksGpuContext *context, ksGpuGraphicsPipeline *pipeline) {
+    UNUSED_PARM(context);
+
+    if (pipeline->vertexArrayObject != 0) {
+        GL(glDeleteVertexArrays(1, &pipeline->vertexArrayObject));
+        pipeline->vertexArrayObject = 0;
+    }
+}
+
+bool ksGpuComputePipeline_Create(ksGpuContext *context, ksGpuComputePipeline *pipeline, const ksGpuComputeProgram *program) {
+    UNUSED_PARM(context);
+
+    pipeline->program = program;
+
+    return true;
+}
+
+void ksGpuComputePipeline_Destroy(ksGpuContext *context, ksGpuComputePipeline *pipeline) {
+    UNUSED_PARM(context);
+    UNUSED_PARM(pipeline);
+}
+void ksGpuFence_Create(ksGpuContext *context, ksGpuFence *fence) {
+    UNUSED_PARM(context);
+
+#if USE_SYNC_OBJECT == 0
+    fence->sync = 0;
+#elif USE_SYNC_OBJECT == 1
+    fence->display = 0;
+    fence->sync = EGL_NO_SYNC_KHR;
+#elif USE_SYNC_OBJECT == 2
+    static const char syncComputeProgramGLSL[] = "#version " GLSL_VERSION
+                                                 "\n"
+                                                 "\n"
+                                                 "layout( local_size_x = 1, local_size_y = 1 ) in;\n"
+                                                 "\n"
+                                                 "layout( std430, binding = 0 ) buffer syncBuffer { int sync[]; };\n"
+                                                 "\n"
+                                                 "void main()\n"
+                                                 "{\n"
+                                                 "    sync[0] = 0;\n"
+                                                 "}\n";
+    const char *source = syncComputeProgramGLSL;
+    // Create a compute program to write to a storage buffer.
+    GLint r;
+    GL(fence->computeShader = glCreateShader(GL_COMPUTE_SHADER));
+    GL(glShaderSource(fence->computeShader, 1, (const char **)&source, 0));
+    GL(glCompileShader(fence->computeShader));
+    GL(glGetShaderiv(fence->computeShader, GL_COMPILE_STATUS, &r));
+    assert(r != GL_FALSE);
+    GL(fence->computeProgram = glCreateProgram());
+    GL(glAttachShader(fence->computeProgram, fence->computeShader));
+    GL(glLinkProgram(fence->computeProgram));
+    GL(glGetProgramiv(fence->computeProgram, GL_LINK_STATUS, &r));
+    assert(r != GL_FALSE);
+    // Create the persistently mapped storage buffer.
+    GL(glGenBuffers(1, &fence->storageBuffer));
+    GL(glBindBuffer(GL_SHADER_STORAGE_BUFFER, fence->storageBuffer));
+    GL(glBufferStorage(GL_SHADER_STORAGE_BUFFER, sizeof(GLuint), NULL,
+                       GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT));
+    GL(fence->mappedBuffer =
+           (GLuint *)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GLuint),
+                                      GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT));
+    GL(glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0));
+#else
+#error "invalid USE_SYNC_OBJECT setting"
+#endif
+}
+
+void ksGpuFence_Destroy(ksGpuContext *context, ksGpuFence *fence) {
+    UNUSED_PARM(context);
+
+#if USE_SYNC_OBJECT == 0
+    if (fence->sync != 0) {
+        GL(glDeleteSync(fence->sync));
+        fence->sync = 0;
+    }
+#elif USE_SYNC_OBJECT == 1
+    if (fence->sync != EGL_NO_SYNC_KHR) {
+        EGL(eglDestroySyncKHR(fence->display, fence->sync));
+        fence->display = 0;
+        fence->sync = EGL_NO_SYNC_KHR;
+    }
+#elif USE_SYNC_OBJECT == 2
+    GL(glBindBuffer(GL_SHADER_STORAGE_BUFFER, fence->storageBuffer));
+    GL(glUnmapBuffer(GL_SHADER_STORAGE_BUFFER));
+    GL(glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0));
+
+    GL(glDeleteBuffers(1, &fence->storageBuffer));
+    GL(glDeleteProgram(fence->computeProgram));
+    GL(glDeleteShader(fence->computeShader));
+#else
+#error "invalid USE_SYNC_OBJECT setting"
+#endif
+}
+
+void ksGpuFence_Submit(ksGpuContext *context, ksGpuFence *fence) {
+    UNUSED_PARM(context);
+
+#if USE_SYNC_OBJECT == 0
+    // Destroy any old sync object.
+    if (fence->sync != 0) {
+        GL(glDeleteSync(fence->sync));
+        fence->sync = 0;
+    }
+    // Create and insert a new sync object.
+    GL(fence->sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0));
+    // Force flushing the commands.
+    // Note that some drivers will already flush when calling glFenceSync.
+    GL(glClientWaitSync(fence->sync, GL_SYNC_FLUSH_COMMANDS_BIT, 0));
+#elif USE_SYNC_OBJECT == 1
+    // Destroy any old sync object.
+    if (fence->sync != EGL_NO_SYNC_KHR) {
+        EGL(eglDestroySyncKHR(fence->display, fence->sync));
+        fence->display = 0;
+        fence->sync = EGL_NO_SYNC_KHR;
+    }
+    // Create and insert a new sync object.
+    fence->display = eglGetCurrentDisplay();
+    fence->sync = eglCreateSyncKHR(fence->display, EGL_SYNC_FENCE_KHR, NULL);
+    if (fence->sync == EGL_NO_SYNC_KHR) {
+        Error("eglCreateSyncKHR() : EGL_NO_SYNC_KHR");
+    }
+    // Force flushing the commands.
+    // Note that some drivers will already flush when calling eglCreateSyncKHR.
+    EGL(eglClientWaitSyncKHR(fence->display, fence->sync, EGL_SYNC_FLUSH_COMMANDS_BIT_KHR, 0));
+#elif USE_SYNC_OBJECT == 2
+    // Initialize the storage buffer to 1 on the client side.
+    fence->mappedBuffer[0] = 1;
+    // Use a compute shader to clear the persistently mapped storage buffer.
+    // This relies on a compute shader only being executed after all other work has completed.
+    GL(glUseProgram(fence->computeProgram));
+    GL(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, fence->storageBuffer));
+    GL(glDispatchCompute(1, 1, 1));
+    GL(glUseProgram(0));
+    // Flush the commands.
+    // Note that some drivers may ignore a flush which could result in the storage buffer never being updated.
+    GL(glFlush());
+#else
+#error "invalid USE_SYNC_OBJECT setting"
+#endif
+}
+
+bool ksGpuFence_IsSignalled(ksGpuContext *context, ksGpuFence *fence) {
+    UNUSED_PARM(context);
+
+    if (fence == NULL) {
+        return false;
+    }
+#if USE_SYNC_OBJECT == 0
+    if (glIsSync(fence->sync)) {
+        GL(const GLenum result = glClientWaitSync(fence->sync, 0, 0));
+        if (result == GL_WAIT_FAILED) {
+            Error("glClientWaitSync() : GL_WAIT_FAILED");
+        }
+        if (result != GL_TIMEOUT_EXPIRED) {
+            return true;
+        }
+    }
+#elif USE_SYNC_OBJECT == 1
+    if (fence->sync != EGL_NO_SYNC_KHR) {
+        const EGLint result = eglClientWaitSyncKHR(fence->display, fence->sync, 0, 0);
+        if (result == EGL_FALSE) {
+            Error("eglClientWaitSyncKHR() : EGL_FALSE");
+        }
+        if (result != EGL_TIMEOUT_EXPIRED_KHR) {
+            return true;
+        }
+    }
+#elif USE_SYNC_OBJECT == 2
+    if (fence->mappedBuffer[0] == 0) {
+        return true;
+    }
+#else
+#error "invalid USE_SYNC_OBJECT setting"
+#endif
+    return false;
+}
+
+void ksGpuProgramParmState_SetParm(ksGpuProgramParmState *parmState, const ksGpuProgramParmLayout *parmLayout, const int index,
+                                   const ksGpuProgramParmType parmType, const void *pointer) {
+    assert(index >= 0 && index < KS_MAX_PROGRAM_PARMS);
+    if (pointer != NULL) {
+        bool found = false;
+        for (int i = 0; i < parmLayout->numParms; i++) {
+            if (parmLayout->parms[i].index == index) {
+                assert(parmLayout->parms[i].type == parmType);
+                found = true;
+                break;
+            }
+        }
+        // Currently parms can be set even if they are not used by the program.
+        // assert( found );
+        UNUSED_PARM(found);
+    }
+
+    parmState->parms[index] = pointer;
+
+#if SAVE_PUSH_CONSTANT_STATE == 1
+    const int pushConstantSize = ksGpuProgramParm_GetPushConstantSize(parmType);
+    if (pushConstantSize > 0) {
+        assert(parmLayout->offsetForIndex[index] >= 0);
+        assert(parmLayout->offsetForIndex[index] + pushConstantSize <= MAX_SAVED_PUSH_CONSTANT_BYTES);
+        memcpy(&parmState->data[parmLayout->offsetForIndex[index]], pointer, pushConstantSize);
+    }
+#endif
+}
+
+const void *ksGpuProgramParmState_NewPushConstantData(const ksGpuProgramParmLayout *newLayout, const int newParmIndex,
+                                                      const ksGpuProgramParmState *newParmState,
+                                                      const ksGpuProgramParmLayout *oldLayout, const int oldParmIndex,
+                                                      const ksGpuProgramParmState *oldParmState, const bool force) {
+#if SAVE_PUSH_CONSTANT_STATE == 1
+    const ksGpuProgramParm *newParm = &newLayout->parms[newParmIndex];
+    const unsigned char *newData = &newParmState->data[newLayout->offsetForIndex[newParm->index]];
+    if (force || oldLayout == NULL || oldParmIndex >= oldLayout->numParms) {
+        return newData;
+    }
+    const ksGpuProgramParm *oldParm = &oldLayout->parms[oldParmIndex];
+    const unsigned char *oldData = &oldParmState->data[oldLayout->offsetForIndex[oldParm->index]];
+    if (newParm->type != oldParm->type || newLayout->parmBindings[newParmIndex] != oldLayout->parmBindings[oldParmIndex]) {
+        return newData;
+    }
+    const int pushConstantSize = ksGpuProgramParm_GetPushConstantSize(newParm->type);
+    if (memcmp(newData, oldData, pushConstantSize) != 0) {
+        return newData;
+    }
+    return NULL;
+#else
+    if (force || oldLayout == NULL || oldParmIndex >= oldLayout->numParms ||
+        newLayout->parmBindings[newParmIndex] != oldLayout->parmBindings[oldParmIndex] ||
+        newLayout->parms[newParmIndex].type != oldLayout->parms[oldParmIndex].type ||
+        newParmState->parms[newLayout->parms[newParmIndex].index] != oldParmState->parms[oldLayout->parms[oldParmIndex].index]) {
+        return newParmState->parms[newLayout->parms[newParmIndex].index];
+    }
+    return NULL;
+#endif
 }

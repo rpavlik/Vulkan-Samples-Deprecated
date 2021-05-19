@@ -8153,7 +8153,7 @@ static void ksGpuProgramParmLayout_Create( ksGpuContext * context, ksGpuProgramP
 ================================================================================================================================
 */
 
-#define MAX_PROGRAM_PARMS 16
+#define KS_MAX_PROGRAM_PARMS 16
 
 typedef enum {
     KS_GPU_PROGRAM_STAGE_FLAG_VERTEX = BIT(0),

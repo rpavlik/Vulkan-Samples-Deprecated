@@ -113,6 +113,8 @@ WORK ITEMS
 #if !defined(KSGRAPHICSWRAPPER_OPENGL_H)
 #define KSGRAPHICSWRAPPER_OPENGL_H
 
+#include "gfxwrapper_common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1640,6 +1642,454 @@ int ksGpuFramebuffer_GetHeight(const ksGpuFramebuffer *framebuffer);
 ksScreenRect ksGpuFramebuffer_GetRect(const ksGpuFramebuffer *framebuffer);
 int ksGpuFramebuffer_GetBufferCount(const ksGpuFramebuffer *framebuffer);
 ksGpuTexture *ksGpuFramebuffer_GetColorTexture(const ksGpuFramebuffer *framebuffer);
+
+/*
+================================================================================================================================
+
+GPU program parms and layout.
+
+ksGpuProgramStageFlags
+ksGpuProgramParmType
+ksGpuProgramParmAccess
+ksGpuProgramParm
+ksGpuProgramParmLayout
+
+static void ksGpuProgramParmLayout_Create( ksGpuContext * context, ksGpuProgramParmLayout * layout,
+                                                                                const ksGpuProgramParm * parms, const int numParms,
+                                                                                const GLuint program );
+static void ksGpuProgramParmLayout_Destroy( ksGpuContext * context, ksGpuProgramParmLayout * layout );
+
+================================================================================================================================
+*/
+
+#define KS_MAX_PROGRAM_PARMS 16
+
+typedef enum {
+    KS_GPU_PROGRAM_STAGE_FLAG_VERTEX = BIT(0),
+    KS_GPU_PROGRAM_STAGE_FLAG_FRAGMENT = BIT(1),
+    KS_GPU_PROGRAM_STAGE_FLAG_COMPUTE = BIT(2),
+    KS_GPU_PROGRAM_STAGE_MAX = 3
+} ksGpuProgramStageFlags;
+
+typedef enum {
+    KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_SAMPLED,    // texture plus sampler bound together        (GLSL: sampler*, isampler*,
+                                                 // usampler*)
+    KS_GPU_PROGRAM_PARM_TYPE_TEXTURE_STORAGE,    // not sampled, direct read-write storage    (GLSL: image*, iimage*, uimage*)
+    KS_GPU_PROGRAM_PARM_TYPE_BUFFER_UNIFORM,     // read-only uniform buffer                    (GLSL: uniform)
+    KS_GPU_PROGRAM_PARM_TYPE_BUFFER_STORAGE,     // read-write storage buffer                (GLSL: buffer)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT,  // int                                        (GLSL:
+                                                 // int)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR2,      // int[2]                                    (GLSL:
+                                                             // ivec2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR3,      // int[3]                                    (GLSL:
+                                                             // ivec3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_INT_VECTOR4,      // int[4]                                    (GLSL:
+                                                             // ivec4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT,            // float                                    (GLSL:
+                                                             // float)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR2,    // float[2]                                    (GLSL:
+                                                             // vec2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR3,    // float[3]                                    (GLSL:
+                                                             // vec3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_VECTOR4,    // float[4]                                    (GLSL:
+                                                             // vec4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X2,  // float[2][2]
+                                                             // (GLSL: mat2x2 or mat2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X3,  // float[2][3]
+                                                             // (GLSL: mat2x3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX2X4,  // float[2][4]
+                                                             // (GLSL: mat2x4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X2,  // float[3][2]
+                                                             // (GLSL: mat3x2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X3,  // float[3][3]
+                                                             // (GLSL: mat3x3 or mat3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX3X4,  // float[3][4]
+                                                             // (GLSL: mat3x4)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X2,  // float[4][2]
+                                                             // (GLSL: mat4x2)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X3,  // float[4][3]
+                                                             // (GLSL: mat4x3)
+    KS_GPU_PROGRAM_PARM_TYPE_PUSH_CONSTANT_FLOAT_MATRIX4X4,  // float[4][4]
+                                                             // (GLSL: mat4x4 or mat4)
+    KS_GPU_PROGRAM_PARM_TYPE_MAX
+} ksGpuProgramParmType;
+
+typedef enum {
+    KS_GPU_PROGRAM_PARM_ACCESS_READ_ONLY,
+    KS_GPU_PROGRAM_PARM_ACCESS_WRITE_ONLY,
+    KS_GPU_PROGRAM_PARM_ACCESS_READ_WRITE
+} ksGpuProgramParmAccess;
+
+typedef struct {
+    int stageFlags;                 // vertex, fragment and/or compute
+    ksGpuProgramParmType type;      // texture, buffer or push constant
+    ksGpuProgramParmAccess access;  // read and/or write
+    int index;                      // index into ksGpuProgramParmState::parms
+    const char *name;               // GLSL name
+    int binding;                    // OpenGL shader bind points:
+                                    // - texture image unit
+                                    // - image unit
+                                    // - uniform buffer
+                                    // - storage buffer
+                                    // - uniform
+    // Note that each bind point uses its own range of binding indices with each range starting at zero.
+    // However, each range is unique across all stages of a pipeline.
+    // Note that even though multiple targets can be bound to the same texture image unit,
+    // the OpenGL spec disallows rendering from multiple targets using a single texture image unit.
+
+} ksGpuProgramParm;
+
+typedef struct {
+    int numParms;
+    const ksGpuProgramParm *parms;
+    int offsetForIndex[KS_MAX_PROGRAM_PARMS];   // push constant offsets into ksGpuProgramParmState::data based on
+                                                // ksGpuProgramParm::index
+    GLint parmLocations[KS_MAX_PROGRAM_PARMS];  // OpenGL locations
+    GLint parmBindings[KS_MAX_PROGRAM_PARMS];
+    GLint numSampledTextureBindings;
+    GLint numStorageTextureBindings;
+    GLint numUniformBufferBindings;
+    GLint numStorageBufferBindings;
+} ksGpuProgramParmLayout;
+
+/*
+================================================================================================================================
+
+GPU graphics program.
+
+A graphics program encapsulates a vertex and fragment program that are used to render geometry.
+For optimal performance a graphics program should only be created at load time, not at runtime.
+
+ksGpuGraphicsProgram
+
+bool ksGpuGraphicsProgram_Create(ksGpuContext *context, ksGpuGraphicsProgram *program, const void *vertexSourceData,
+                                 const size_t vertexSourceSize, const void *fragmentSourceData, const size_t fragmentSourceSize,
+                                 const ksGpuProgramParm *parms, const int numParms, const ksGpuVertexAttribute *vertexLayout,
+                                 const int vertexAttribsFlags);
+
+void ksGpuGraphicsProgram_Destroy(ksGpuContext *context, ksGpuGraphicsProgram *program);
+
+================================================================================================================================
+*/
+
+typedef struct {
+    GLuint vertexShader;
+    GLuint fragmentShader;
+    GLuint program;
+    ksGpuProgramParmLayout parmLayout;
+    int vertexAttribsFlags;
+    ksStringHash hash;
+} ksGpuGraphicsProgram;
+
+bool ksGpuGraphicsProgram_Create(ksGpuContext *context, ksGpuGraphicsProgram *program, const void *vertexSourceData,
+                                 const size_t vertexSourceSize, const void *fragmentSourceData, const size_t fragmentSourceSize,
+                                 const ksGpuProgramParm *parms, const int numParms, const ksGpuVertexAttribute *vertexLayout,
+                                 const int vertexAttribsFlags);
+void ksGpuGraphicsProgram_Destroy(ksGpuContext *context, ksGpuGraphicsProgram *program);
+
+/*
+================================================================================================================================
+
+GPU compute program.
+
+For optimal performance a compute program should only be created at load time, not at runtime.
+
+ksGpuComputeProgram
+
+bool ksGpuComputeProgram_Create(ksGpuContext *context, ksGpuComputeProgram *program, const void *computeSourceData,
+                                       const size_t computeSourceSize, const ksGpuProgramParm *parms, const int numParms);
+
+void ksGpuComputeProgram_Destroy(ksGpuContext *context, ksGpuComputeProgram *program);
+
+================================================================================================================================
+*/
+
+typedef struct {
+    GLuint computeShader;
+    GLuint program;
+    ksGpuProgramParmLayout parmLayout;
+    ksStringHash hash;
+} ksGpuComputeProgram;
+
+bool ksGpuComputeProgram_Create(ksGpuContext *context, ksGpuComputeProgram *program, const void *computeSourceData,
+                                const size_t computeSourceSize, const ksGpuProgramParm *parms, const int numParms);
+void ksGpuComputeProgram_Destroy(ksGpuContext *context, ksGpuComputeProgram *program);
+
+/*
+================================================================================================================================
+
+GPU graphics pipeline.
+
+A graphics pipeline encapsulates the geometry, program and ROP state that is used to render.
+For optimal performance a graphics pipeline should only be created at load time, not at runtime.
+Due to the use of a Vertex Array Object (VAO), a graphics pipeline must be created using the same
+context that is used to render with the graphics pipeline. The VAO is created here, when both the
+geometry and the program are known, to avoid binding vertex attributes that are not used by the
+vertex shader, and to avoid binding to a discontinuous set of vertex attribute locations.
+
+ksGpuFrontFace
+ksGpuCullMode
+ksGpuCompareOp
+ksGpuBlendOp
+ksGpuBlendFactor
+ksGpuRasterOperations
+ksGpuGraphicsPipelineParms
+ksGpuGraphicsPipeline
+
+
+void ksGpuGraphicsPipelineParms_Init(ksGpuGraphicsPipelineParms *parms);
+bool ksGpuGraphicsPipeline_Create(ksGpuContext *context, ksGpuGraphicsPipeline *pipeline, const ksGpuGraphicsPipelineParms *parms);
+void ksGpuGraphicsPipeline_Destroy(ksGpuContext *context, ksGpuGraphicsPipeline *pipeline);
+
+================================================================================================================================
+*/
+
+typedef enum { KS_GPU_FRONT_FACE_COUNTER_CLOCKWISE = GL_CCW, KS_GPU_FRONT_FACE_CLOCKWISE = GL_CW } ksGpuFrontFace;
+
+typedef enum { KS_GPU_CULL_MODE_NONE = GL_NONE, KS_GPU_CULL_MODE_FRONT = GL_FRONT, KS_GPU_CULL_MODE_BACK = GL_BACK } ksGpuCullMode;
+
+typedef enum {
+    KS_GPU_COMPARE_OP_NEVER = GL_NEVER,
+    KS_GPU_COMPARE_OP_LESS = GL_LESS,
+    KS_GPU_COMPARE_OP_EQUAL = GL_EQUAL,
+    KS_GPU_COMPARE_OP_LESS_OR_EQUAL = GL_LEQUAL,
+    KS_GPU_COMPARE_OP_GREATER = GL_GREATER,
+    KS_GPU_COMPARE_OP_NOT_EQUAL = GL_NOTEQUAL,
+    KS_GPU_COMPARE_OP_GREATER_OR_EQUAL = GL_GEQUAL,
+    KS_GPU_COMPARE_OP_ALWAYS = GL_ALWAYS
+} ksGpuCompareOp;
+
+typedef enum {
+    KS_GPU_BLEND_OP_ADD = GL_FUNC_ADD,
+    KS_GPU_BLEND_OP_SUBTRACT = GL_FUNC_SUBTRACT,
+    KS_GPU_BLEND_OP_REVERSE_SUBTRACT = GL_FUNC_REVERSE_SUBTRACT,
+    KS_GPU_BLEND_OP_MIN = GL_MIN,
+    KS_GPU_BLEND_OP_MAX = GL_MAX
+} ksGpuBlendOp;
+
+typedef enum {
+    KS_GPU_BLEND_FACTOR_ZERO = GL_ZERO,
+    KS_GPU_BLEND_FACTOR_ONE = GL_ONE,
+    KS_GPU_BLEND_FACTOR_SRC_COLOR = GL_SRC_COLOR,
+    KS_GPU_BLEND_FACTOR_ONE_MINUS_SRC_COLOR = GL_ONE_MINUS_SRC_COLOR,
+    KS_GPU_BLEND_FACTOR_DST_COLOR = GL_DST_COLOR,
+    KS_GPU_BLEND_FACTOR_ONE_MINUS_DST_COLOR = GL_ONE_MINUS_DST_COLOR,
+    KS_GPU_BLEND_FACTOR_SRC_ALPHA = GL_SRC_ALPHA,
+    KS_GPU_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA = GL_ONE_MINUS_SRC_ALPHA,
+    KS_GPU_BLEND_FACTOR_DST_ALPHA = GL_DST_ALPHA,
+    KS_GPU_BLEND_FACTOR_ONE_MINUS_DST_ALPHA = GL_ONE_MINUS_DST_ALPHA,
+    KS_GPU_BLEND_FACTOR_CONSTANT_COLOR = GL_CONSTANT_COLOR,
+    KS_GPU_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR = GL_ONE_MINUS_CONSTANT_COLOR,
+    KS_GPU_BLEND_FACTOR_CONSTANT_ALPHA = GL_CONSTANT_ALPHA,
+    KS_GPU_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA = GL_ONE_MINUS_CONSTANT_ALPHA,
+    KS_GPU_BLEND_FACTOR_SRC_ALPHA_SATURATE = GL_SRC_ALPHA_SATURATE
+} ksGpuBlendFactor;
+
+typedef struct {
+    bool blendEnable;
+    bool redWriteEnable;
+    bool blueWriteEnable;
+    bool greenWriteEnable;
+    bool alphaWriteEnable;
+    bool depthTestEnable;
+    bool depthWriteEnable;
+    ksGpuFrontFace frontFace;
+    ksGpuCullMode cullMode;
+    ksGpuCompareOp depthCompare;
+    ksVector4f blendColor;
+    ksGpuBlendOp blendOpColor;
+    ksGpuBlendFactor blendSrcColor;
+    ksGpuBlendFactor blendDstColor;
+    ksGpuBlendOp blendOpAlpha;
+    ksGpuBlendFactor blendSrcAlpha;
+    ksGpuBlendFactor blendDstAlpha;
+} ksGpuRasterOperations;
+
+typedef struct {
+    ksGpuRasterOperations rop;
+    const ksGpuRenderPass *renderPass;
+    const ksGpuGraphicsProgram *program;
+    const ksGpuGeometry *geometry;
+} ksGpuGraphicsPipelineParms;
+
+typedef struct {
+    ksGpuRasterOperations rop;
+    const ksGpuGraphicsProgram *program;
+    const ksGpuGeometry *geometry;
+    GLuint vertexArrayObject;
+} ksGpuGraphicsPipeline;
+
+void ksGpuGraphicsPipelineParms_Init(ksGpuGraphicsPipelineParms *parms);
+bool ksGpuGraphicsPipeline_Create(ksGpuContext *context, ksGpuGraphicsPipeline *pipeline, const ksGpuGraphicsPipelineParms *parms);
+void ksGpuGraphicsPipeline_Destroy(ksGpuContext *context, ksGpuGraphicsPipeline *pipeline);
+
+/*
+================================================================================================================================
+
+GPU compute pipeline.
+
+A compute pipeline encapsulates a compute program.
+For optimal performance a compute pipeline should only be created at load time, not at runtime.
+
+ksGpuComputePipeline
+
+bool ksGpuComputePipeline_Create(ksGpuContext *context, ksGpuComputePipeline *pipeline, const ksGpuComputeProgram *program);
+void ksGpuComputePipeline_Destroy(ksGpuContext *context, ksGpuComputePipeline *pipeline);
+
+================================================================================================================================
+*/
+
+typedef struct {
+    const ksGpuComputeProgram *program;
+} ksGpuComputePipeline;
+
+bool ksGpuComputePipeline_Create(ksGpuContext *context, ksGpuComputePipeline *pipeline, const ksGpuComputeProgram *program);
+void ksGpuComputePipeline_Destroy(ksGpuContext *context, ksGpuComputePipeline *pipeline);
+
+/*
+================================================================================================================================
+
+GPU fence.
+
+A fence is used to notify completion of a command buffer.
+For optimal performance a fence should only be created at load time, not at runtime.
+
+ksGpuFence
+
+void ksGpuFence_Create( ksGpuContext * context, ksGpuFence * fence );
+void ksGpuFence_Destroy( ksGpuContext * context, ksGpuFence * fence );
+void ksGpuFence_Submit( ksGpuContext * context, ksGpuFence * fence );
+void ksGpuFence_IsSignalled( ksGpuContext * context, ksGpuFence * fence );
+
+================================================================================================================================
+*/
+
+typedef struct {
+#if USE_SYNC_OBJECT == 0
+    GLsync sync;
+#elif USE_SYNC_OBJECT == 1
+    EGLDisplay display;
+    EGLSyncKHR sync;
+#elif USE_SYNC_OBJECT == 2
+    GLuint computeShader;
+    GLuint computeProgram;
+    GLuint storageBuffer;
+    GLuint *mappedBuffer;
+#else
+#error "invalid USE_SYNC_OBJECT setting"
+#endif
+} ksGpuFence;
+
+void ksGpuFence_Create(ksGpuContext *context, ksGpuFence *fence);
+void ksGpuFence_Destroy(ksGpuContext *context, ksGpuFence *fence);
+void ksGpuFence_Submit(ksGpuContext *context, ksGpuFence *fence);
+void ksGpuFence_IsSignalled(ksGpuContext *context, ksGpuFence *fence);
+
+/*
+================================================================================================================================
+
+GPU program parm state.
+
+ksGpuProgramParmState
+
+================================================================================================================================
+*/
+
+#define SAVE_PUSH_CONSTANT_STATE 1
+#define MAX_SAVED_PUSH_CONSTANT_BYTES 512
+
+typedef struct {
+    const void *parms[KS_MAX_PROGRAM_PARMS];
+#if SAVE_PUSH_CONSTANT_STATE == 1
+    unsigned char data[MAX_SAVED_PUSH_CONSTANT_BYTES];
+#endif
+} ksGpuProgramParmState;
+
+void ksGpuProgramParmState_SetParm(ksGpuProgramParmState *parmState, const ksGpuProgramParmLayout *parmLayout, const int index,
+                                   const ksGpuProgramParmType parmType, const void *pointer);
+
+const void *ksGpuProgramParmState_NewPushConstantData(const ksGpuProgramParmLayout *newLayout, const int newParmIndex,
+                                                      const ksGpuProgramParmState *newParmState,
+                                                      const ksGpuProgramParmLayout *oldLayout, const int oldParmIndex,
+                                                      const ksGpuProgramParmState *oldParmState, const bool force);
+
+/*
+================================================================================================================================
+
+GPU graphics commands.
+
+A graphics command encapsulates all GPU state associated with a single draw call.
+The pointers passed in as parameters are expected to point to unique objects that persist
+at least past the submission of the command buffer into which the graphics command is
+submitted. Because pointers are maintained as state, DO NOT use pointers to local
+variables that will go out of scope before the command buffer is submitted.
+
+ksGpuGraphicsCommand
+
+void ksGpuGraphicsCommand_Init(ksGpuGraphicsCommand *command);
+void ksGpuGraphicsCommand_SetPipeline(ksGpuGraphicsCommand *command, const ksGpuGraphicsPipeline *pipeline);
+void ksGpuGraphicsCommand_SetVertexBuffer(ksGpuGraphicsCommand *command, const ksGpuBuffer *vertexBuffer);
+void ksGpuGraphicsCommand_SetInstanceBuffer(ksGpuGraphicsCommand *command, const ksGpuBuffer *instanceBuffer);
+void ksGpuGraphicsCommand_SetParmTextureSampled(ksGpuGraphicsCommand *command, const int index, const ksGpuTexture *texture);
+void ksGpuGraphicsCommand_SetParmTextureStorage(ksGpuGraphicsCommand *command, const int index, const ksGpuTexture *texture);
+void ksGpuGraphicsCommand_SetParmBufferUniform(ksGpuGraphicsCommand *command, const int index, const ksGpuBuffer *buffer);
+void ksGpuGraphicsCommand_SetParmBufferStorage(ksGpuGraphicsCommand *command, const int index, const ksGpuBuffer *buffer);
+void ksGpuGraphicsCommand_SetParmInt(ksGpuGraphicsCommand *command, const int index, const int *value);
+void ksGpuGraphicsCommand_SetParmIntVector2(ksGpuGraphicsCommand *command, const int index, const ksVector2i *value);
+void ksGpuGraphicsCommand_SetParmIntVector3(ksGpuGraphicsCommand *command, const int index, const ksVector3i *value);
+void ksGpuGraphicsCommand_SetParmIntVector4(ksGpuGraphicsCommand *command, const int index, const ksVector4i *value);
+void ksGpuGraphicsCommand_SetParmFloat(ksGpuGraphicsCommand *command, const int index, const float *value);
+void ksGpuGraphicsCommand_SetParmFloatVector2(ksGpuGraphicsCommand *command, const int index, const ksVector2f *value);
+void ksGpuGraphicsCommand_SetParmFloatVector3(ksGpuGraphicsCommand *command, const int index, const ksVector3f *value);
+void ksGpuGraphicsCommand_SetParmFloatVector4(ksGpuGraphicsCommand *command, const int index, const ksVector3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix2x2(ksGpuGraphicsCommand *command, const int index, const ksMatrix2x2f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix2x3(ksGpuGraphicsCommand *command, const int index, const ksMatrix2x3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix2x4(ksGpuGraphicsCommand *command, const int index, const ksMatrix2x4f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix3x2(ksGpuGraphicsCommand *command, const int index, const ksMatrix3x2f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix3x3(ksGpuGraphicsCommand *command, const int index, const ksMatrix3x3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix3x4(ksGpuGraphicsCommand *command, const int index, const ksMatrix3x4f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix4x2(ksGpuGraphicsCommand *command, const int index, const ksMatrix4x2f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix4x3(ksGpuGraphicsCommand *command, const int index, const ksMatrix4x3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix4x4(ksGpuGraphicsCommand *command, const int index, const ksMatrix4x4f *value);
+void ksGpuGraphicsCommand_SetNumInstances(ksGpuGraphicsCommand *command, const int numInstances);
+
+================================================================================================================================
+*/
+
+typedef struct {
+    const ksGpuGraphicsPipeline *pipeline;
+    const ksGpuBuffer *vertexBuffer;    // vertex buffer returned by ksGpuCommandBuffer_MapVertexAttributes
+    const ksGpuBuffer *instanceBuffer;  // instance buffer returned by ksGpuCommandBuffer_MapInstanceAttributes
+    ksGpuProgramParmState parmState;
+    int numInstances;
+} ksGpuGraphicsCommand;
+
+void ksGpuGraphicsCommand_Init(ksGpuGraphicsCommand *command);
+void ksGpuGraphicsCommand_SetPipeline(ksGpuGraphicsCommand *command, const ksGpuGraphicsPipeline *pipeline);
+void ksGpuGraphicsCommand_SetVertexBuffer(ksGpuGraphicsCommand *command, const ksGpuBuffer *vertexBuffer);
+void ksGpuGraphicsCommand_SetInstanceBuffer(ksGpuGraphicsCommand *command, const ksGpuBuffer *instanceBuffer);
+void ksGpuGraphicsCommand_SetParmTextureSampled(ksGpuGraphicsCommand *command, const int index, const ksGpuTexture *texture);
+void ksGpuGraphicsCommand_SetParmTextureStorage(ksGpuGraphicsCommand *command, const int index, const ksGpuTexture *texture);
+void ksGpuGraphicsCommand_SetParmBufferUniform(ksGpuGraphicsCommand *command, const int index, const ksGpuBuffer *buffer);
+void ksGpuGraphicsCommand_SetParmBufferStorage(ksGpuGraphicsCommand *command, const int index, const ksGpuBuffer *buffer);
+void ksGpuGraphicsCommand_SetParmInt(ksGpuGraphicsCommand *command, const int index, const int *value);
+void ksGpuGraphicsCommand_SetParmIntVector2(ksGpuGraphicsCommand *command, const int index, const ksVector2i *value);
+void ksGpuGraphicsCommand_SetParmIntVector3(ksGpuGraphicsCommand *command, const int index, const ksVector3i *value);
+void ksGpuGraphicsCommand_SetParmIntVector4(ksGpuGraphicsCommand *command, const int index, const ksVector4i *value);
+void ksGpuGraphicsCommand_SetParmFloat(ksGpuGraphicsCommand *command, const int index, const float *value);
+void ksGpuGraphicsCommand_SetParmFloatVector2(ksGpuGraphicsCommand *command, const int index, const ksVector2f *value);
+void ksGpuGraphicsCommand_SetParmFloatVector3(ksGpuGraphicsCommand *command, const int index, const ksVector3f *value);
+void ksGpuGraphicsCommand_SetParmFloatVector4(ksGpuGraphicsCommand *command, const int index, const ksVector3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix2x2(ksGpuGraphicsCommand *command, const int index, const ksMatrix2x2f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix2x3(ksGpuGraphicsCommand *command, const int index, const ksMatrix2x3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix2x4(ksGpuGraphicsCommand *command, const int index, const ksMatrix2x4f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix3x2(ksGpuGraphicsCommand *command, const int index, const ksMatrix3x2f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix3x3(ksGpuGraphicsCommand *command, const int index, const ksMatrix3x3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix3x4(ksGpuGraphicsCommand *command, const int index, const ksMatrix3x4f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix4x2(ksGpuGraphicsCommand *command, const int index, const ksMatrix4x2f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix4x3(ksGpuGraphicsCommand *command, const int index, const ksMatrix4x3f *value);
+void ksGpuGraphicsCommand_SetParmFloatMatrix4x4(ksGpuGraphicsCommand *command, const int index, const ksMatrix4x4f *value);
+void ksGpuGraphicsCommand_SetNumInstances(ksGpuGraphicsCommand *command, const int numInstances);
 
 #ifdef __cplusplus
 }

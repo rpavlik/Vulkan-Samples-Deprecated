@@ -14,6 +14,8 @@ LICENSE
 
 Copyright (c) 2016 Oculus VR, LLC.
 
+SPDX-License-Identifier: Apache-2.0
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -90,11 +92,13 @@ static inline void glGetFormatSize( const GLenum internalFormat, GlFormatSize * 
 #include <assert.h>
 
 #if defined(_WIN32)
+#ifndef NOMINMAX
 #define NOMINMAX
-#ifndef __cplusplus
+#endif
+#if defined(_MSC_VER) && !defined(__cplusplus)
 #undef inline
 #define inline __inline
-#endif // __cplusplus
+#endif // defined(_MSC_VER) && !defined(__cplusplus)
 #endif
 
 typedef unsigned int GLenum;

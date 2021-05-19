@@ -2,9 +2,10 @@
 #
 # atw_cpu_dsp
 #
-if( WIN32 )
+if( MSVC )
     add_executable( atw_cpu_dsp atw_cpu_dsp.c )
-    target_compile_options( atw_cpu_dsp PRIVATE /arch:AVX /Zc:wchar_t /Zc:forScope /Wall /WX )
+    # Warning 5045 is "spectre mitigation available here"
+    target_compile_options( atw_cpu_dsp PRIVATE /arch:AVX /Zc:wchar_t /Zc:forScope /Wall /wd5045 )
 	set_target_properties( atw_cpu_dsp PROPERTIES FOLDER apps )
 elseif( APPLE )
     find_library( COCOA_LIBRARY Cocoa )
@@ -23,9 +24,9 @@ endif()
 #
 # atw_opengl
 #
-if( WIN32 )
+if( MSVC )
     add_executable( atw_opengl WIN32 atw_opengl.c scenes/scene_settings.h scenes/scene_view_state.h scenes/scene_perf.h scenes/scene_gltf.h )
-    target_compile_options( atw_opengl PRIVATE /Zc:wchar_t /Zc:forScope /Wall /WX )
+    target_compile_options( atw_opengl PRIVATE /Zc:wchar_t /Zc:forScope /Wall /wd5045 )
 	set_target_properties( atw_opengl PROPERTIES FOLDER apps )
     target_link_libraries( atw_opengl opengl32 )
 elseif( APPLE )
@@ -46,9 +47,9 @@ endif()
 #
 # atw_vulkan
 #
-if( WIN32 )
+if( MSVC )
     add_executable( atw_vulkan WIN32 atw_vulkan.c scenes/scene_settings.h scenes/scene_view_state.h scenes/scene_perf.h scenes/scene_gltf.h )
-    target_compile_options( atw_vulkan PRIVATE /Zc:wchar_t /Zc:forScope /Wall /WX )
+    target_compile_options( atw_vulkan PRIVATE /Zc:wchar_t /Zc:forScope /Wall /wd5045 )
 	set_target_properties( atw_vulkan PROPERTIES FOLDER apps )
     target_link_libraries( atw_vulkan )
 elseif( APPLE )

@@ -87,6 +87,10 @@ static inline void vkGetFormatSize( const VkFormat format, VkFormatSize * pForma
 
 #include "../GL/gl_format.h"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4061)
+#endif
 static inline VkFormat vkGetFormatFromOpenGLFormat( const GLenum format, const GLenum type )
 {
 	switch ( type )
@@ -1367,5 +1371,9 @@ static inline void vkGetFormatSize( const VkFormat format, VkFormatSize * pForma
 			break;
 	}
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // !VK_FORMAT_H
